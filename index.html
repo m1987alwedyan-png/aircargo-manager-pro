@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirCargo Manager Pro - نظام إدارة الشحن الجوي المتكامل</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{font-family:'Cairo','Inter',sans-serif;}
+body{background:#f1f5f9;}
+.sidebar-item{transition:all 0.3s ease;position:relative;}
+.sidebar-item:hover,.sidebar-item.active{background:linear-gradient(90deg,rgba(14,165,233,0.15) 0%,transparent 100%);border-right:3px solid #0ea5e9;color:#38bdf8;}
+.sidebar-item.active::before{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);width:3px;height:24px;background:#0ea5e9;border-radius:2px;}
+.card-hover{transition:all 0.3s cubic-bezier(0.4,0,0.2,1);}
+.card-hover:hover{transform:translateY(-4px);box-shadow:0 20px 40px -10px rgba(0,0,0,0.15);}
+.fade-in{animation:fadeIn 0.5s ease-out;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.timeline-line{position:absolute;right:24px;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,#e2e8f0 0%,#0ea5e9 50%,#10b981 100%);border-radius:2px;}
+.timeline-dot{position:absolute;right:16px;width:20px;height:20px;border-radius:50%;background:white;border:3px solid #cbd5e1;z-index:10;transition:all 0.3s;}
+.timeline-dot.completed{background:#10b981;border-color:#10b981;box-shadow:0 0 0 4px rgba(16,185,129,0.2);}
+.timeline-dot.active{background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,0.2);animation:pulse 2s infinite;}
+.timeline-dot.pending{background:#e2e8f0;border-color:#cbd5e1;}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(245,158,11,0.2);}50%{box-shadow:0 0 0 8px rgba(245,158,11,0.1);}}
+.modal-backdrop{background:rgba(15,23,42,0.7);backdrop-filter:blur(8px);}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px;}
+.status-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:9999px;font-size:0.75rem;font-weight:600;}
+.capacity-bar{height:8px;border-radius:9999px;background:#e2e8f0;overflow:hidden;}
+.capacity-fill{height:100%;border-radius:9999px;transition:width 0.6s ease;}
+.capacity-low{background:linear-gradient(90deg,#10b981,#34d399);}
+.capacity-med{background:linear-gradient(90deg,#f59e0b,#fbbf24);}
+.capacity-high{background:linear-gradient(90deg,#ef4444,#f87171);}
+.btn-primary{background:linear-gradient(135deg,#0ea5e9,#0284c7);}
+.btn-primary:hover{background:linear-gradient(135deg,#0284c7,#0369a1);transform:translateY(-1px);box-shadow:0 10px 20px -5px rgba(14,165,233,0.3);}
+.btn-success{background:linear-gradient(135deg,#10b981,#059669);}
+.input-focus:focus{outline:none;box-shadow:0 0 0 3px rgba(14,165,233,0.15);border-color:#0ea5e9;}
+.kpi-card{position:relative;overflow:hidden;}
+.notification-toast{animation:toastIn 0.4s ease-out,toastOut 0.4s ease-in 4.6s forwards;}
+@keyframes toastIn{from{transform:translateX(100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes toastOut{from{transform:translateX(0);opacity:1;}to{transform:translateX(100%);opacity:0;}}
+.print-only{display:none;}
+@media print{.no-print{display:none!important;}.print-only{display:block!important;}body{background:white;}}
+@media(max-width:1023px){aside{position:fixed!important;inset:0 auto 0 0;width:18rem!important;transform:translateX(-100%);transition:transform .25s ease;z-index:50}aside.mobile-open{transform:translateX(0)}#mobile-overlay{display:block!important}.mobile-menu-btn{display:inline-flex!important}}
+.mobile-menu-btn{display:none}
+#mobile-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:40}
+</style>
+</head>
+<body class="text-slate-800 antialiased">
+<div id="toast-container" class="fixed top-4 left-4 z-[60] space-y-2"></div>
+<div id="app" class="flex h-screen overflow-hidden">
+<aside class="w-72 bg-slate-900 text-white flex flex-col shadow-2xl z-20 no-print overflow-y-auto">
+<div class="p-6 border-b border-slate-700/50">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/30">
+<i class="fas fa-plane-up text-white text-xl"></i>
+</div>
+<div>
+<h1 class="text-xl font-bold tracking-tight">AirCargo Manager</h1>
+<p class="text-xs text-slate-400 font-medium">نظام إدارة الشحن الجوي المتكامل</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 py-4 px-3 space-y-1">
+<div class="px-3 mb-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider">القائمة الرئيسية</div>
+<a href="#" onclick="showSection('dashboard');return false;" id="nav-dashboard" class="sidebar-item active flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-chart-line w-5 text-center text-sky-400"></i><span>لوحة التحكم</span>
+</a>
+<a href="#" onclick="showSection('bookings');return false;" id="nav-bookings" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-calendar-check w-5 text-center text-emerald-400"></i><span>الحجوزات</span>
+<span id="badge-bookings" class="mr-auto bg-sky-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+</a>
+<a href="#" onclick="showSection('shipments');return false;" id="nav-shipments" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-route w-5 text-center text-amber-400"></i><span>تتبع الشحنات</span>
+<span id="badge-transit" class="mr-auto bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">0</span>
+</a>
+<a href="#" onclick="showSection('awb');return false;" id="nav-awb" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-file-contract w-5 text-center text-violet-400"></i><span>بوليصات الشحن AWB</span>
+</a>
+<a href="#" onclick="showSection('flights');return false;" id="nav-flights" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-plane-departure w-5 text-center text-indigo-400"></i><span>الرحلات والسعات</span>
+</a>
+<a href="#" onclick="showSection('customers');return false;" id="nav-customers" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-users w-5 text-center text-pink-400"></i><span>العملاء والوكلاء</span>
+</a>
+<a href="#" onclick="showSection('pricing');return false;" id="nav-pricing" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-calculator w-5 text-center text-orange-400"></i><span>التسعير والفواتير</span>
+</a>
+<a href="#" onclick="showSection('reports');return false;" id="nav-reports" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-chart-pie w-5 text-center text-teal-400"></i><span>التقارير والتحليلات</span>
+</a>
+<a href="#" onclick="showSection('audit');return false;" id="nav-audit" class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium">
+<i class="fas fa-shield-halved w-5 text-center text-red-400"></i><span>سجل العمليات</span>
+</a>
+</nav>
+<div class="p-4 border-t border-slate-700/50">
+<div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/50">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white font-bold text-sm">A</div>
+<div>
+<p class="text-sm font-bold">مدير النظام</p>
+<p class="text-[11px] text-slate-400">admin@aircargo.com</p>
+</div>
+</div>
+<div class="mt-3 flex gap-2">
+<button onclick="exportDatabase()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-xs py-1.5 rounded-lg transition" title="تصدير قاعدة البيانات"><i class="fas fa-download"></i></button>
+<button onclick="document.getElementById('import-file').click()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-xs py-1.5 rounded-lg transition" title="استيراد قاعدة البيانات"><i class="fas fa-upload"></i></button>
+<input type="file" id="import-file" class="hidden" accept=".json" onchange="importDatabase(event)">
+</div>
+</div>
+</div>
+</aside>
+<div id="mobile-overlay" onclick="toggleMobileMenu()"></div>
+<main class="flex-1 flex flex-col overflow-hidden">
+<header class="bg-white/80 backdrop-blur-md border-b border-slate-200/80 h-16 flex items-center justify-between px-6 shadow-sm no-print z-10">
+<div class="flex items-center gap-3">
+<button class="mobile-menu-btn p-2 rounded-lg text-slate-600 hover:bg-slate-100" onclick="toggleMobileMenu()" aria-label="فتح القائمة"><i class="fas fa-bars"></i></button>
+<h2 id="page-title" class="text-xl font-bold text-slate-900">لوحة التحكم</h2>
+<span id="current-date" class="text-xs text-slate-500 bg-slate-100/80 px-3 py-1.5 rounded-full font-medium border border-slate-200"></span>
+</div>
+<div class="flex items-center gap-3">
+<button onclick="seedData()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg text-xs font-bold border border-emerald-200 transition flex items-center gap-2">
+<i class="fas fa-database"></i> تحميل بيانات تجريبية
+</button>
+<button onclick="showNotifications()" class="relative p-2.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition">
+<i class="fas fa-bell text-lg"></i>
+<span id="notif-badge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white hidden"></span>
+</button>
+</div>
+</header>
+<div id="content-area" class="flex-1 overflow-y-auto p-6">
+
+<!-- DASHBOARD -->
+<section id="section-dashboard" class="fade-in space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+<div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-slate-100 card-hover">
+<div class="flex justify-between items-start mb-3">
+<div class="p-2.5 bg-blue-50 rounded-lg"><i class="fas fa-calendar-day text-blue-600 text-lg"></i></div>
+<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">+12%</span>
+</div>
+<p class="text-2xl font-black text-slate-900" id="stat-today">0</p>
+<p class="text-xs text-slate-500 font-medium mt-1">حجوزات اليوم</p>
+</div>
+<div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-slate-100 card-hover">
+<div class="flex justify-between items-start mb-3">
+<div class="p-2.5 bg-amber-50 rounded-lg"><i class="fas fa-truck-fast text-amber-600 text-lg"></i></div>
+</div>
+<p class="text-2xl font-black text-slate-900" id="stat-transit">0</p>
+<p class="text-xs text-slate-500 font-medium mt-1">شحنات قيد النقل</p>
+</div>
+<div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-slate-100 card-hover">
+<div class="flex justify-between items-start mb-3">
+<div class="p-2.5 bg-indigo-50 rounded-lg"><i class="fas fa-plane-departure text-indigo-600 text-lg"></i></div>
+</div>
+<p class="text-2xl font-black text-slate-900" id="stat-flights">0</p>
+<p class="text-xs text-slate-500 font-medium mt-1">رحلات 48 ساعة</p>
+</div>
+<div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-slate-100 card-hover">
+<div class="flex justify-between items-start mb-3">
+<div class="p-2.5 bg-purple-50 rounded-lg"><i class="fas fa-gauge-high text-purple-600 text-lg"></i></div>
+</div>
+<p class="text-2xl font-black text-slate-900" id="stat-capacity">0%</p>
+<p class="text-xs text-slate-500 font-medium mt-1">السعة المستخدمة</p>
+</div>
+<div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-slate-100 card-hover">
+<div class="flex justify-between items-start mb-3">
+<div class="p-2.5 bg-emerald-50 rounded-lg"><i class="fas fa-coins text-emerald-600 text-lg"></i></div>
+<span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">+8%</span>
+</div>
+<p class="text-2xl font-black text-slate-900" id="stat-revenue">0</p>
+<p class="text-xs text-slate-500 font-medium mt-1">الإيرادات الشهرية (د.أ)</p>
+</div>
+<div class="kpi-card bg-white rounded-xl p-5 shadow-sm border border-slate-100 card-hover">
+<div class="flex justify-between items-start mb-3">
+<div class="p-2.5 bg-rose-50 rounded-lg"><i class="fas fa-hand-holding-dollar text-rose-600 text-lg"></i></div>
+</div>
+<p class="text-2xl font-black text-slate-900" id="stat-due">0</p>
+<p class="text-xs text-slate-500 font-medium mt-1">مبالغ مستحقة (د.أ)</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-slate-900">أداء الإيرادات الشهرية</h3>
+<select id="chart-year" class="text-xs border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50 font-medium" onchange="renderCharts()"><option value="2026" selected>2026</option><option value="2025">2025</option></select>
+</div>
+<div class="relative h-72"><canvas id="revenueChart"></canvas></div>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<h3 class="text-lg font-bold text-slate-900 mb-6">توزيع حالات الشحنات</h3>
+<div class="relative h-64"><canvas id="statusChart"></canvas></div>
+<div class="mt-4 grid grid-cols-2 gap-2 text-xs">
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-slate-400"></span><span class="text-slate-600">تم الإنشاء</span></div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-400"></span><span class="text-slate-600">قيد النقل</span></div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-teal-400"></span><span class="text-slate-600">وصلت للوجهة</span></div>
+<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-400"></span><span class="text-slate-600">تم التسليم</span></div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-bold text-slate-900">آخر الشحنات</h3>
+<button onclick="showSection('shipments')" class="text-sky-500 text-xs font-bold hover:underline">عرض الكل</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-slate-50 text-slate-600">
+<tr><th class="px-3 py-3 text-right font-semibold rounded-r-lg">رقم AWB</th><th class="px-3 py-3 text-right font-semibold">العميل</th><th class="px-3 py-3 text-right font-semibold">المسار</th><th class="px-3 py-3 text-right font-semibold">الوزن</th><th class="px-3 py-3 text-right font-semibold">الحالة</th><th class="px-3 py-3 text-right font-semibold rounded-l-lg">الإجراء</th></tr>
+</thead>
+<tbody id="recent-shipments-table" class="divide-y divide-slate-100"></tbody>
+</table>
+</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-bold text-slate-900">الرحلات القادمة</h3>
+<button onclick="showSection('flights')" class="text-sky-500 text-xs font-bold hover:underline">عرض الكل</button>
+</div>
+<div id="upcoming-flights-list" class="space-y-3"></div>
+</div>
+</div>
+</section>
+
+<!-- BOOKINGS -->
+<section id="section-bookings" class="hidden fade-in space-y-6">
+<div class="flex flex-wrap justify-between items-center gap-4">
+<div class="flex gap-3">
+<button onclick="openBookingModal()" class="btn-primary text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-sky-200/50 transition flex items-center gap-2 text-sm"><i class="fas fa-plus"></i> حجز جديد</button>
+<button onclick="exportBookingsExcel()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2 text-sm shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> تصدير Excel</button>
+</div>
+<div class="relative">
+<input type="text" id="booking-search" placeholder="بحث برقم الحجز أو العميل أو AWB..." class="w-80 pr-10 pl-4 py-2.5 border border-slate-200 rounded-xl input-focus text-sm bg-white" oninput="renderBookings()">
+<i class="fas fa-search absolute right-3.5 top-3 text-slate-400"></i>
+</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+<tr><th class="px-4 py-4 text-right font-bold">رقم الحجز</th><th class="px-4 py-4 text-right font-bold">العميل / الوكيل</th><th class="px-4 py-4 text-right font-bold">الشاحن → المستلم</th><th class="px-4 py-4 text-right font-bold">الرحلة</th><th class="px-4 py-4 text-right font-bold">الوزن / الأبعاد</th><th class="px-4 py-4 text-right font-bold">السعر</th><th class="px-4 py-4 text-right font-bold">الحالة</th><th class="px-4 py-4 text-right font-bold">الإجراءات</th></tr>
+</thead>
+<tbody id="bookings-table" class="divide-y divide-slate-100"></tbody>
+</table>
+</div>
+<div id="bookings-empty" class="hidden p-12 text-center text-slate-400"><i class="fas fa-inbox text-4xl mb-3 text-slate-300"></i><p class="font-medium">لا توجد حجوزات مسجلة</p><p class="text-xs mt-1">اضغط "حجز جديد" لإنشاء أول حجز</p></div>
+</div>
+</section>
+
+<!-- SHIPMENTS -->
+<section id="section-shipments" class="hidden fade-in space-y-6">
+<div class="bg-gradient-to-r from-sky-500 to-blue-600 rounded-2xl p-8 text-white shadow-lg">
+<h3 class="text-2xl font-bold mb-2">تتبع الشحنات</h3>
+<p class="text-sky-100 text-sm mb-6">أدخل رقم AWB أو رقم الحجز لمشاهدة رحلة شحنتك من الإنشاء إلى التسليم</p>
+<div class="flex gap-3 max-w-2xl">
+<div class="relative flex-1">
+<input type="text" id="tracking-search" placeholder="أدخل رقم AWB للتتبع..." class="w-full pr-12 pl-4 py-3.5 rounded-xl text-slate-900 font-medium text-sm border-0 shadow-lg focus:ring-2 focus:ring-white/30" onkeypress="if(event.key==='Enter')trackShipment()">
+<i class="fas fa-barcode absolute right-4 top-3.5 text-slate-400 text-lg"></i>
+</div>
+<button onclick="trackShipment()" class="bg-white text-sky-600 px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-sky-50 transition shadow-lg"><i class="fas fa-search ml-2"></i> تتبع</button>
+</div>
+</div>
+<div id="tracking-result" class="hidden space-y-6">
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-8">
+<div class="flex flex-wrap justify-between items-start mb-8 gap-4">
+<div>
+<div class="flex items-center gap-3 mb-2">
+<h3 class="text-2xl font-bold text-slate-900">تتبع الشحنة</h3>
+<span id="track-awb" class="text-xl font-black text-sky-500 bg-sky-50 px-3 py-1 rounded-lg border border-sky-100"></span>
+</div>
+<p class="text-slate-500 text-sm">آخر تحديث: <span id="track-last-update" class="font-medium text-slate-700"></span></p>
+</div>
+<div class="text-center bg-slate-50 rounded-xl px-6 py-3 border border-slate-100">
+<div id="track-status-badge" class="inline-block px-4 py-2 rounded-full text-sm font-bold mb-1"></div>
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">الحالة الحالية</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<div class="bg-slate-50 rounded-xl p-4 border border-slate-100"><p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">العميل</p><p class="font-bold text-slate-900 text-sm" id="track-customer"></p></div>
+<div class="bg-slate-50 rounded-xl p-4 border border-slate-100"><p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">الوزن المحتسب</p><p class="font-bold text-slate-900 text-sm" id="track-weight"></p></div>
+<div class="bg-slate-50 rounded-xl p-4 border border-slate-100"><p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">المحطة التالية</p><p class="font-bold text-sky-600 text-sm" id="track-next"></p></div>
+<div class="bg-slate-50 rounded-xl p-4 border border-slate-100"><p class="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">التسليم المتوقع</p><p class="font-bold text-emerald-600 text-sm" id="track-eta"></p></div>
+</div>
+<div class="relative pr-10" id="timeline-container"><div class="timeline-line"></div></div>
+</div>
+</div>
+<div id="tracking-empty" class="bg-white rounded-xl shadow-sm border border-slate-100 p-16 text-center">
+<div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fas fa-route text-3xl text-slate-300"></i></div>
+<h3 class="text-lg font-bold text-slate-700 mb-2">تتبع الشحنات</h3>
+<p class="text-sm text-slate-400 max-w-md mx-auto">أدخل رقم AWB أعلاه لمشاهدة رحلة شحنتك الكاملة من الإنشاء حتى التسليم النهائي</p>
+</div>
+</section>
+
+<!-- AWB -->
+<section id="section-awb" class="hidden fade-in space-y-6">
+<div class="flex justify-between items-center">
+<div class="flex gap-3">
+<button onclick="openAWBModal()" class="btn-primary text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-sky-200/50 transition flex items-center gap-2 text-sm"><i class="fas fa-file-signature"></i> إنشاء AWB جديد</button>
+<button onclick="exportAWBExcel()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2 text-sm shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> تصدير Excel</button>
+</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+<tr><th class="px-4 py-4 text-right font-bold">رقم AWB</th><th class="px-4 py-4 text-right font-bold">النوع</th><th class="px-4 py-4 text-right font-bold">الشحنة</th><th class="px-4 py-4 text-right font-bold">الشاحن</th><th class="px-4 py-4 text-right font-bold">المستلم</th><th class="px-4 py-4 text-right font-bold">الوزن</th><th class="px-4 py-4 text-right font-bold">القيمة</th><th class="px-4 py-4 text-right font-bold">تاريخ الإصدار</th><th class="px-4 py-4 text-right font-bold">الإجراءات</th></tr>
+</thead>
+<tbody id="awb-table" class="divide-y divide-slate-100"></tbody>
+</table>
+</div>
+</div>
+</section>
+
+<!-- FLIGHTS -->
+<section id="section-flights" class="hidden fade-in space-y-6">
+<div class="flex justify-between items-center">
+<button onclick="openFlightModal()" class="btn-primary text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-sky-200/50 transition flex items-center gap-2 text-sm"><i class="fas fa-plus"></i> إضافة رحلة</button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="flights-grid"></div>
+</section>
+
+<!-- CUSTOMERS -->
+<section id="section-customers" class="hidden fade-in space-y-6">
+<div class="flex flex-wrap gap-3">
+<button onclick="openCustomerModal()" class="btn-primary text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-sky-200/50 transition flex items-center gap-2 text-sm"><i class="fas fa-user-plus"></i> عميل جديد</button>
+<button onclick="openAgentModal()" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-5 py-2.5 rounded-xl font-bold transition flex items-center gap-2 text-sm shadow-sm"><i class="fas fa-handshake text-indigo-500"></i> وكيل جديد</button>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fas fa-building text-blue-500"></i> العملاء</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-slate-50 text-slate-600"><tr><th class="px-3 py-3 text-right font-bold">الاسم</th><th class="px-3 py-3 text-right font-bold">النوع</th><th class="px-3 py-3 text-right font-bold">الهاتف</th><th class="px-3 py-3 text-right font-bold">الرصيد</th><th class="px-3 py-3 text-right font-bold">الإجراءات</th></tr></thead>
+<tbody id="customers-table" class="divide-y divide-slate-100"></tbody>
+</table>
+</div>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fas fa-handshake text-indigo-500"></i> الوكلاء</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-slate-50 text-slate-600"><tr><th class="px-3 py-3 text-right font-bold">الاسم</th><th class="px-3 py-3 text-right font-bold">المناطق</th><th class="px-3 py-3 text-right font-bold">العمولة</th><th class="px-3 py-3 text-right font-bold">الحجوزات</th></tr></thead>
+<tbody id="agents-table" class="divide-y divide-slate-100"></tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+
+<!-- PRICING -->
+<section id="section-pricing" class="hidden fade-in space-y-6">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<h3 class="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2"><i class="fas fa-calculator text-orange-500"></i> حاسبة التسعير المتكاملة</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الوزن الفعلي (كغم)</label><input type="number" id="calc-actual-weight" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" placeholder="0.00" oninput="calculatePrice()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الأبعاد (ط×عرض×ارتفاع سم)</label><div class="flex gap-2"><input type="number" id="calc-l" placeholder="ط" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-center input-focus text-sm" oninput="calculatePrice()"><input type="number" id="calc-w" placeholder="ع" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-center input-focus text-sm" oninput="calculatePrice()"><input type="number" id="calc-h" placeholder="ا" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-center input-focus text-sm" oninput="calculatePrice()"></div></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">سعر الكيلوغرام (د.أ)</label><input type="number" id="calc-rate" value="1.85" step="0.01" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="calculatePrice()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رسوم المناولة (د.أ)</label><input type="number" id="calc-handling" value="35" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="calculatePrice()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رسوم المستندات (د.أ)</label><input type="number" id="calc-docs" value="10" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="calculatePrice()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">نسبة الضريبة (%)</label><input type="number" id="calc-tax" value="5" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="calculatePrice()"></div>
+</div>
+<div class="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
+<div class="grid grid-cols-2 gap-4 mb-4">
+<div class="flex justify-between items-center"><span class="text-sm text-slate-600">الوزن المقاس:</span><span class="font-bold text-slate-900" id="res-volumetric">0.00 كغم</span></div>
+<div class="flex justify-between items-center"><span class="text-sm text-slate-600">الوزن المحتسب:</span><span class="font-bold text-sky-600 text-lg" id="res-chargeable">0.00 كغم</span></div>
+<div class="flex justify-between items-center"><span class="text-sm text-slate-600">الشحن الجوي:</span><span class="font-bold text-slate-900" id="res-freight">0.00 د.أ</span></div>
+<div class="flex justify-between items-center"><span class="text-sm text-slate-600">المجموع الفرعي:</span><span class="font-bold text-slate-900" id="res-subtotal">0.00 د.أ</span></div>
+<div class="flex justify-between items-center"><span class="text-sm text-slate-600">الضريبة:</span><span class="font-bold text-slate-900" id="res-tax">0.00 د.أ</span></div>
+</div>
+<div class="border-t-2 border-slate-300 pt-4 flex justify-between items-center"><span class="text-lg font-bold text-slate-900">الإجمالي:</span><span class="text-3xl font-black text-emerald-600" id="res-total">0.00 د.أ</span></div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fas fa-file-invoice-dollar text-rose-500"></i> الفواتير الأخيرة</h3>
+<div id="invoices-list" class="space-y-3"></div>
+</div>
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fas fa-percent text-purple-500"></i> عمولات الوكلاء</h3>
+<div id="commissions-list" class="space-y-3"></div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- REPORTS -->
+<section id="section-reports" class="hidden fade-in space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div onclick="generateReport('bookings')" class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 card-hover cursor-pointer group">
+<div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-100 transition"><i class="fas fa-calendar-check text-blue-600 text-2xl"></i></div>
+<h3 class="font-bold text-slate-900 mb-1">تقرير الحجوزات</h3><p class="text-xs text-slate-500">تصدير Excel/PDF مع التفاصيل الكاملة</p>
+</div>
+<div onclick="generateReport('revenue')" class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 card-hover cursor-pointer group">
+<div class="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-100 transition"><i class="fas fa-coins text-emerald-600 text-2xl"></i></div>
+<h3 class="font-bold text-slate-900 mb-1">تقرير الإيرادات</h3><p class="text-xs text-slate-500">تحليل مالي شامل والمبالغ المستحقة</p>
+</div>
+<div onclick="generateReport('shipments')" class="bg-white rounded-xl p-6 shadow-sm border border-slate-100 card-hover cursor-pointer group">
+<div class="w-14 h-14 bg-purple-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-100 transition"><i class="fas fa-boxes-stacked text-purple-600 text-2xl"></i></div>
+<h3 class="font-bold text-slate-900 mb-1">تقرير الشحنات</h3><p class="text-xs text-slate-500">حالات وأداء الشحنات والتوزيع</p>
+</div>
+</div>
+<div id="report-preview" class="bg-white rounded-xl shadow-sm border border-slate-100 p-8 hidden">
+<div class="flex justify-between items-center mb-6 no-print">
+<h3 id="report-title" class="text-xl font-bold text-slate-900"></h3>
+<div class="flex gap-2">
+<button onclick="exportReportExcel()" class="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg text-xs font-bold border border-emerald-200 hover:bg-emerald-100 transition"><i class="fas fa-file-excel ml-1"></i> Excel</button>
+<button onclick="printReport()" class="bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-800 transition"><i class="fas fa-print ml-1"></i> طباعة / PDF</button>
+</div>
+</div>
+<div id="report-content"></div>
+</div>
+</section>
+
+<!-- AUDIT -->
+<section id="section-audit" class="hidden fade-in space-y-6">
+<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-shield-halved text-red-500"></i> سجل العمليات والتدقيق</h3>
+<button onclick="clearAuditLogs()" class="text-xs text-red-500 hover:text-red-700 font-bold border border-red-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"><i class="fas fa-trash"></i> مسح السجل</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-xs">
+<thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+<tr><th class="px-4 py-3 text-right font-bold">الوقت</th><th class="px-4 py-3 text-right font-bold">المستخدم</th><th class="px-4 py-3 text-right font-bold">العملية</th><th class="px-4 py-3 text-right font-bold">الكيان</th><th class="px-4 py-3 text-right font-bold">التفاصيل</th></tr>
+</thead>
+<tbody id="audit-table" class="divide-y divide-slate-100"></tbody>
+</table>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+
+<!-- MODALS -->
+<div id="booking-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-y-auto">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10 rounded-t-2xl">
+<h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-calendar-plus text-sky-500"></i> حجز شحنة جديدة</h3>
+<button onclick="closeModal('booking-modal')" class="text-slate-400 hover:text-red-500 text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-6">
+<form id="booking-form" onsubmit="saveBooking(event)">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رقم الحجز (تلقائي)</label><input type="text" id="bk-number" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-500 font-mono text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">تاريخ الحجز</label><input type="date" id="bk-date" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">العميل</label><select id="bk-customer" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option value="">اختر العميل</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الوكيل</label><select id="bk-agent" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option value="">بدون وكيل</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الشاحن</label><input type="text" id="bk-shipper" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" placeholder="اسم الشاحن"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">المستلم</label><input type="text" id="bk-consignee" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" placeholder="اسم المستلم"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">مطار الإقلاع</label><select id="bk-origin" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option value="">اختر المطار</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">مطار الوصول</label><select id="bk-dest" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option value="">اختر المطار</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">شركة الطيران</label><select id="bk-airline" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white" onchange="updateFlightOptions()"><option value="">اختر الشركة</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الرحلة</label><select id="bk-flight" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option value="">اختر الرحلة</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">تاريخ التسليم المتوقع</label><input type="date" id="bk-eta" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+</div>
+<div class="border-t border-slate-100 pt-6 mb-6">
+<h4 class="font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fas fa-box text-amber-500"></i> تفاصيل الشحنة</h4>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">عدد الطرود</label><input type="number" id="bk-pieces" min="1" value="1" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الوزن الفعلي (كغم)</label><input type="number" id="bk-weight" step="0.01" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="updateBookingTotal()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الأبعاد (سم)</label><input type="text" id="bk-dims" placeholder="50×60×80" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="updateBookingTotal()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">نوع البضاعة</label><select id="bk-cargo-type" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option>عامة</option><option>مستلزمات إلكترونية</option><option>أدوية</option><option>مواد غذائية</option><option>خطرة</option><option>حيوانات حية</option><option>قيمة عالية</option></select></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">درجة الحرارة المطلوبة</label><input type="text" id="bk-temp" placeholder="مثال: 2-8°C" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">ملاحظات خاصة</label><input type="text" id="bk-notes" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" placeholder="تعليمات التسليم..."></div>
+</div>
+</div>
+<div class="border-t border-slate-100 pt-6 mb-6">
+<h4 class="font-bold text-slate-900 mb-4 flex items-center gap-2"><i class="fas fa-tag text-emerald-500"></i> التسعير</h4>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">سعر الكيلو (د.أ)</label><input type="number" id="bk-rate" step="0.01" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="updateBookingTotal()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رسوم مناولة (د.أ)</label><input type="number" id="bk-handling" value="35" step="0.01" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="updateBookingTotal()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رسوم مستندات (د.أ)</label><input type="number" id="bk-docs" value="10" step="0.01" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" oninput="updateBookingTotal()"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الإجمالي (د.أ)</label><input type="text" id="bk-total" readonly class="w-full bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 font-bold text-emerald-700 text-lg"></div>
+</div>
+</div>
+<div class="flex justify-end gap-3">
+<button type="button" onclick="closeModal('booking-modal')" class="px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition">إلغاء</button>
+<button type="submit" class="px-8 py-2.5 btn-primary text-white rounded-xl font-bold shadow-lg shadow-sky-200/50 transition text-sm">حفظ الحجز</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="awb-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10 rounded-t-2xl">
+<h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-file-contract text-violet-500"></i> إنشاء بوليصة شحن AWB</h3>
+<button onclick="closeModal('awb-modal')" class="text-slate-400 hover:text-red-500 text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-6">
+<form id="awb-form" onsubmit="saveAWB(event)">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رقم AWB</label><input type="text" id="awb-number" required placeholder="123-45678901" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm font-mono"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">نوع البوليصة</label><select id="awb-type" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option value="Master">Master AWB</option><option value="House">House AWB</option></select></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الشحنة المرتبطة</label><select id="awb-booking" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white" onchange="fillAWBFromBooking()"><option value="">اختر الحجز</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">القيمة المعلنة (د.أ)</label><input type="number" id="awb-value" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الشاحن</label><input type="text" id="awb-shipper" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">المستلم</label><input type="text" id="awb-consignee" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الوزن</label><input type="text" id="awb-weight" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">عدد الطرود</label><input type="text" id="awb-pieces" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الأبعاد</label><input type="text" id="awb-dims" readonly class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm"></div>
+</div>
+<div class="mb-4"><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">وصف البضاعة</label><textarea id="awb-desc" rows="3" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm resize-none"></textarea></div>
+<div class="flex justify-end gap-3">
+<button type="button" onclick="closeModal('awb-modal')" class="px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition">إلغاء</button>
+<button type="submit" class="px-8 py-2.5 btn-primary text-white rounded-xl font-bold shadow-lg shadow-sky-200/50 transition text-sm">إصدار AWB</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="flight-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-plane text-indigo-500"></i> إضافة رحلة جديدة</h3>
+<button onclick="closeModal('flight-modal')" class="text-slate-400 hover:text-red-500 text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-6">
+<form id="flight-form" onsubmit="saveFlight(event)">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رقم الرحلة</label><input type="text" id="fl-number" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm" placeholder="مثال: RJ 610"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">شركة الطيران</label><select id="fl-airline" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">مطار الإقلاع</label><select id="fl-origin" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">مطار الوصول</label><select id="fl-dest" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">تاريخ المغادرة</label><input type="datetime-local" id="fl-departure" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">تاريخ الوصول</label><input type="datetime-local" id="fl-arrival" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">نوع الطائرة</label><input type="text" id="fl-aircraft" placeholder="Boeing 747-400F" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">السعة القصوى (كغم)</label><input type="number" id="fl-capacity" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+</div>
+<div class="flex justify-end gap-3">
+<button type="button" onclick="closeModal('flight-modal')" class="px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition">إلغاء</button>
+<button type="submit" class="px-8 py-2.5 btn-primary text-white rounded-xl font-bold shadow-lg shadow-sky-200/50 transition text-sm">حفظ الرحلة</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="customer-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-user-plus text-blue-500"></i> عميل جديد</h3>
+<button onclick="closeModal('customer-modal')" class="text-slate-400 hover:text-red-500 text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-6">
+<form id="customer-form" onsubmit="saveCustomer(event)">
+<div class="space-y-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">الاسم التجاري</label><input type="text" id="cust-name" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">نوع الحساب</label><select id="cust-type" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm bg-white"><option>شركة شحن</option><option>مصنع</option><option>تاجر</option><option>فرد</option></select></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">رقم الهاتف</label><input type="tel" id="cust-phone" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">البريد الإلكتروني</label><input type="email" id="cust-email" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">العنوان</label><input type="text" id="cust-address" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+</div>
+<div class="flex justify-end gap-3 mt-6">
+<button type="button" onclick="closeModal('customer-modal')" class="px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition">إلغاء</button>
+<button type="submit" class="px-8 py-2.5 btn-primary text-white rounded-xl font-bold shadow-lg shadow-sky-200/50 transition text-sm">حفظ</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="agent-modal" class="fixed inset-0 modal-backdrop hidden z-50 flex items-center justify-center p-4">
+<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+<div class="p-6 border-b border-slate-100 flex justify-between items-center">
+<h3 class="text-xl font-bold text-slate-900 flex items-center gap-2"><i class="fas fa-handshake text-indigo-500"></i> وكيل جديد</h3>
+<button onclick="closeModal('agent-modal')" class="text-slate-400 hover:text-red-500 text-xl w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition"><i class="fas fa-times"></i></button>
+</div>
+<div class="p-6">
+<form id="agent-form" onsubmit="saveAgent(event)">
+<div class="space-y-4">
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">اسم الوكيل</label><input type="text" id="agent-name" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">المناطق التي يعمل بها</label><input type="text" id="agent-areas" placeholder="عمّان، دبي، الرياض" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+<div><label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">نسبة العمولة (%)</label><input type="number" id="agent-commission" step="0.1" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 input-focus text-sm"></div>
+</div>
+<div class="flex justify-end gap-3 mt-6">
+<button type="button" onclick="closeModal('agent-modal')" class="px-6 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 font-bold text-sm transition">إلغاء</button>
+<button type="submit" class="px-8 py-2.5 btn-primary text-white rounded-xl font-bold shadow-lg shadow-sky-200/50 transition text-sm">حفظ</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="notification-panel" class="fixed inset-0 modal-backdrop hidden z-50 flex justify-end">
+<div class="bg-white w-96 h-full shadow-2xl p-6 overflow-y-auto">
+<div class="flex justify-between items-center mb-6">
+<h3 class="text-lg font-bold text-slate-900">الإشعارات</h3>
+<button onclick="closeModal('notification-panel')" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+</div>
+<div id="notifications-list" class="space-y-3"></div>
+</div>
+</div>
+
+<script>
+// ================= DATA STORE =================
+let db = {
+    customers: [], agents: [],
+    airlines: [
+        {id:'RJ',name:'الملكية الأردنية',code:'RJ'},
+        {id:'EK',name:'الإمارات',code:'EK'},
+        {id:'QR',name:'القطرية',code:'QR'},
+        {id:'TK',name:'التركية',code:'TK'},
+        {id:'EY',name:'الاتحاد للشحن',code:'EY'},
+        {id:'SV',name:'السعودية',code:'SV'},
+        {id:'MS',name:'مصر للطيران',code:'MS'},
+        {id:'KU',name:'الكويتية',code:'KU'}
+    ],
+    airports: [
+        {code:'AMM',name:'عمّان - الملكة علياء (AMM)',city:'عمّان',country:'الأردن'},
+        {code:'DXB',name:'دبي الدولي (DXB)',city:'دبي',country:'الإمارات'},
+        {code:'DOH',name:'الدوحة - حمد (DOH)',city:'الدوحة',country:'قطر'},
+        {code:'JED',name:'جدة - الملك عبدالعزيز (JED)',city:'جدة',country:'السعودية'},
+        {code:'IST',name:'إسطنبول (IST)',city:'إسطنبول',country:'تركيا'},
+        {code:'CAI',name:'القاهرة (CAI)',city:'القاهرة',country:'مصر'},
+        {code:'RUH',name:'الرياض (RUH)',city:'الرياض',country:'السعودية'},
+        {code:'KWI',name:'الكويت (KWI)',city:'الكويت',country:'الكويت'},
+        {code:'BAH',name:'البحرين (BAH)',city:'المنامة',country:'البحرين'},
+        {code:'MCT',name:'مسقط (MCT)',city:'مسقط',country:'عمان'},
+        {code:'BEY',name:'بيروت (BEY)',city:'بيروت',country:'لبنان'},
+        {code:'BGW',name:'بغداد (BGW)',city:'بغداد',country:'العراق'}
+    ],
+    flights: [], bookings: [], shipments: [], awb_documents: [],
+    invoices: [], payments: [], commissions: [],
+    notifications: [], audit_logs: []
+};
+
+let currentSection = 'dashboard';
+let revenueChartInstance = null;
+let statusChartInstance = null;
+let currentReportType = '';
+
+// ================= UTILS =================
+function generateId(prefix){return prefix+'-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();}
+function toggleMobileMenu(){const aside=document.querySelector('aside');const overlay=document.getElementById('mobile-overlay');if(!aside)return;aside.classList.toggle('mobile-open');overlay.style.display=aside.classList.contains('mobile-open')?'block':'none';}
+function formatDate(d){if(!d)return'-';const x=new Date(d);return x.toLocaleDateString('ar-JO');}
+function formatDateTime(d){if(!d)return'-';const x=new Date(d);return x.toLocaleString('ar-JO');}
+function formatMoney(n){return parseFloat(n||0).toLocaleString('ar-JO',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function getToday(){return new Date().toISOString().split('T')[0];}
+function getNowISO(){return new Date().toISOString();}
+function saveDB(){try{localStorage.setItem('aircargo_db_v2',JSON.stringify(db));}catch(err){showToast('تعذر حفظ البيانات محلياً','error');console.error(err);}}
+function loadDB(){const saved=localStorage.getItem('aircargo_db_v2');if(!saved)return;try{const parsed=JSON.parse(saved);const keys=['customers','agents','flights','bookings','shipments','awb_documents','invoices','payments','commissions','notifications','audit_logs','airlines','airports'];if(!parsed||typeof parsed!=='object'||keys.some(k=>parsed[k]!==undefined&&!Array.isArray(parsed[k])))throw new Error('Invalid database shape');db={...db,...parsed};}catch(err){localStorage.removeItem('aircargo_db_v2');showToast('تعذر قراءة النسخة المحلية؛ تمت تهيئة بيانات جديدة','warning');console.error(err);}}
+
+function showToast(message, type='success'){
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    const colors = {success:'bg-emerald-500',error:'bg-red-500',warning:'bg-amber-500',info:'bg-sky-500'};
+    const icons = {success:'fa-check-circle',error:'fa-exclamation-circle',warning:'fa-exclamation-triangle',info:'fa-info-circle'};
+    toast.className = `notification-toast ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 text-sm font-bold min-w-[280px]`;
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(()=>toast.remove(),5000);
+}
+
+function addAuditLog(action, entity, details){
+    db.audit_logs.unshift({
+        id: generateId('AUD'),
+        timestamp: getNowISO(),
+        user: 'مدير النظام',
+        action: action,
+        entity: entity,
+        details: details
+    });
+    if(db.audit_logs.length > 500) db.audit_logs = db.audit_logs.slice(0,500);
+    saveDB();
+}
+
+function addNotification(title, message, type='info'){
+    db.notifications.unshift({
+        id: generateId('NOT'),
+        title: title,
+        message: message,
+        type: type,
+        read: false,
+        timestamp: getNowISO()
+    });
+    if(db.notifications.length > 100) db.notifications = db.notifications.slice(0,100);
+    updateNotificationBadge();
+    saveDB();
+}
+
+function updateNotificationBadge(){
+    const unread = db.notifications.filter(n=>!n.read).length;
+    const badge = document.getElementById('notif-badge');
+    if(unread > 0){badge.classList.remove('hidden');}else{badge.classList.add('hidden');}
+}
+
+function showNotifications(){
+    const panel = document.getElementById('notification-panel');
+    const list = document.getElementById('notifications-list');
+    panel.classList.remove('hidden');
+    list.innerHTML = db.notifications.slice(0,20).map(n=>`
+        <div class="p-3 rounded-xl border ${n.read?'bg-slate-50 border-slate-100':'bg-sky-50 border-sky-100'} cursor-pointer" onclick="markNotificationRead('${n.id}')">
+            <div class="flex justify-between items-start mb-1">
+                <span class="font-bold text-sm ${n.read?'text-slate-600':'text-sky-700'}">${n.title}</span>
+                <span class="text-[10px] text-slate-400">${formatDateTime(n.timestamp).split(' ')[0]}</span>
+            </div>
+            <p class="text-xs text-slate-500">${n.message}</p>
+        </div>
+    `).join('');
+    db.notifications.forEach(n=>n.read=true);
+    updateNotificationBadge();
+    saveDB();
+}
+
+function markNotificationRead(id){
+    const n = db.notifications.find(x=>x.id===id);
+    if(n){n.read=true;saveDB();showNotifications();}
+}
+
+// ================= INIT =================
+document.addEventListener('DOMContentLoaded',()=>{
+    loadDB();
+    document.getElementById('current-date').textContent = new Date().toLocaleDateString('ar-JO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    populateSelects();
+    updateDashboard();
+    renderBookings();
+    renderAWB();
+    renderFlights();
+    renderCustomers();
+    renderAgents();
+    renderInvoices();
+    renderCommissions();
+    renderAuditLogs();
+    updateNotificationBadge();
+    if(db.bookings.length===0) seedData();
+});
+
+function populateSelects(){
+    const addOpts = (sel,items,labelKey,valKey,defText='')=>{
+        const s=document.getElementById(sel); if(!s)return;
+        s.innerHTML = `<option value="">${defText}</option>`;
+        items.forEach(i=>{const o=document.createElement('option');o.value=i[valKey];o.textContent=i[labelKey];s.appendChild(o);});
+    };
+    addOpts('bk-customer',db.customers,'name','id','اختر العميل');
+    addOpts('bk-agent',db.agents,'name','id','بدون وكيل');
+    addOpts('bk-origin',db.airports,'name','code','اختر المطار');
+    addOpts('bk-dest',db.airports,'name','code','اختر المطار');
+    addOpts('bk-airline',db.airlines,'name','id','اختر الشركة');
+    addOpts('awb-booking',db.bookings.filter(b=>!b.awbIssued).map(b=>({id:b.id,name:b.number+' - '+b.shipper})),'name','id','اختر الحجز');
+    ['fl-airline','fl-origin','fl-dest'].forEach(id=>{
+        const s=document.getElementById(id); if(!s)return;
+        const list = id==='fl-airline'?db.airlines:db.airports;
+        const vk = id==='fl-airline'?'id':'code'; const lk = id==='fl-airline'?'name':'name';
+        s.innerHTML = '';
+        list.forEach(i=>{const o=document.createElement('option');o.value=i[vk];o.textContent=i[lk];s.appendChild(o);});
+    });
+}
+
+function updateFlightOptions(){
+    const airlineId = document.getElementById('bk-airline').value;
+    const flightSelect = document.getElementById('bk-flight');
+    if(!airlineId || !flightSelect) return;
+    const airline = db.airlines.find(a=>a.id===airlineId);
+    const flights = db.flights.filter(f=>f.airlineId===airlineId);
+    flightSelect.innerHTML = '<option value="">اختر الرحلة</option>';
+    flights.forEach(f=>{
+        const o=document.createElement('option');
+        o.value = f.number;
+        o.textContent = f.number + ' (' + f.origin + ' → ' + f.dest + ')';
+        flightSelect.appendChild(o);
+    });
+}
+
+// ================= NAVIGATION =================
+function showSection(sec){
+    document.querySelectorAll('section').forEach(s=>{s.classList.add('hidden');s.style.display='none';});
+    const target = document.getElementById('section-'+sec);
+    if(target){target.classList.remove('hidden');target.style.display='block';}
+    document.querySelectorAll('.sidebar-item').forEach(s=>s.classList.remove('active'));
+    const nav = document.getElementById('nav-'+sec);
+    if(nav) nav.classList.add('active');
+    currentSection=sec;
+    const titles={dashboard:'لوحة التحكم',bookings:'الحجوزات',shipments:'تتبع الشحنات',awb:'بوليصات الشحن AWB',flights:'الرحلات والسعات',customers:'العملاء والوكلاء',pricing:'التسعير والفواتير',reports:'التقارير والتحليلات',audit:'سجل العمليات'};
+    document.getElementById('page-title').textContent = titles[sec]||'';
+    if(sec==='dashboard') updateDashboard();
+    if(sec==='bookings') renderBookings();
+    if(sec==='awb') renderAWB();
+    if(sec==='flights') renderFlights();
+    if(sec==='customers') {renderCustomers();renderAgents();}
+    if(sec==='pricing') {calculatePrice();renderInvoices();renderCommissions();}
+    if(sec==='audit') renderAuditLogs();
+}
+
+function closeModal(id){
+    const el = document.getElementById(id);
+    if(el) el.classList.add('hidden');
+}
+
+// ================= DASHBOARD =================
+function updateDashboard(){
+    const today = getToday();
+    const todayCount = db.bookings.filter(b=>b.date===today).length;
+    const transitCount = db.shipments.filter(s=>s.status==='قيد النقل'||s.status==='وصلت إلى محطة الترانزيت'||s.status==='غادرت الرحلة'||s.status==='تم تحميلها على الرحلة'||s.status==='وصلت إلى محطة التصدير').length;
+    const now = new Date();
+    const in48 = new Date(now.getTime()+48*60*60*1000);
+    const flightCount = db.flights.filter(f=>{const d=new Date(f.departure);return d>=now&&d<=in48;}).length;
+    const totalCap = db.flights.reduce((a,f)=>a+(parseFloat(f.capacity)||0),0);
+    const usedCap = db.bookings.reduce((a,b)=>a+(parseFloat(b.chargeableWeight||b.weight)||0),0);
+    const capPct = totalCap?Math.min(100,Math.round((usedCap/totalCap)*100)):0;
+    const currentMonth = now.getMonth();
+    const revenue = db.invoices.filter(i=>new Date(i.date).getMonth()===currentMonth).reduce((a,i)=>a+(parseFloat(i.total)||0),0);
+    const due = db.invoices.filter(i=>i.status==='مستحقة').reduce((a,i)=>a+(parseFloat(i.total)||0),0);
+
+    document.getElementById('stat-today').textContent = todayCount;
+    document.getElementById('stat-transit').textContent = transitCount;
+    document.getElementById('stat-flights').textContent = flightCount;
+    document.getElementById('stat-capacity').textContent = capPct+'%';
+    document.getElementById('stat-revenue').textContent = formatMoney(revenue);
+    document.getElementById('stat-due').textContent = formatMoney(due);
+    document.getElementById('badge-bookings').textContent = db.bookings.length;
+    document.getElementById('badge-transit').textContent = transitCount;
+
+    renderRecentShipments();
+    renderUpcomingFlights();
+    renderCharts();
+}
+
+function renderRecentShipments(){
+    const tbody = document.getElementById('recent-shipments-table');
+    const recent = db.shipments.slice(-5).reverse();
+    tbody.innerHTML = recent.map(s=>{
+        const b = db.bookings.find(x=>x.id===s.bookingId);
+        const awb = db.awb_documents.find(x=>x.bookingId===s.bookingId);
+        return `<tr class="hover:bg-slate-50 transition">
+            <td class="px-3 py-3 font-bold text-sky-600">${awb?awb.number:'-'}</td>
+            <td class="px-3 py-3">${b?b.customerName:'-'}</td>
+            <td class="px-3 py-3 text-xs">${b?b.origin+' → '+b.dest:'-'}</td>
+            <td class="px-3 py-3">${b?b.chargeableWeight||b.weight+' كغم':'-'}</td>
+            <td class="px-3 py-3"><span class="status-badge ${getStatusClass(s.status)}">${s.status}</span></td>
+            <td class="px-3 py-3"><button onclick="viewShipment('${s.id}')" class="text-sky-500 hover:text-sky-700 w-8 h-8 rounded-lg hover:bg-sky-50 transition"><i class="fas fa-eye"></i></button></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderUpcomingFlights(){
+    const container = document.getElementById('upcoming-flights-list');
+    const now = new Date();
+    const in48 = new Date(now.getTime()+48*60*60*1000);
+    const upcoming = db.flights.filter(f=>{const d=new Date(f.departure);return d>=now&&d<=in48;}).slice(0,3);
+    container.innerHTML = upcoming.map(f=>{
+        const used = db.bookings.filter(b=>b.flight===f.number).reduce((a,b)=>a+(parseFloat(b.chargeableWeight||b.weight)||0),0);
+        const pct = Math.min(100,Math.round((used/f.capacity)*100));
+        return `<div class="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center"><i class="fas fa-plane text-indigo-600"></i></div>
+            <div class="flex-1">
+                <div class="font-bold text-sm text-slate-900">${f.number}</div>
+                <div class="text-xs text-slate-500">${f.origin} → ${f.dest} | ${formatDateTime(f.departure).split(' ')[0]}</div>
+            </div>
+            <div class="text-left">
+                <div class="text-xs font-bold ${pct>90?'text-red-600':pct>70?'text-amber-600':'text-emerald-600'}">${pct}%</div>
+                <div class="w-20 capacity-bar"><div class="capacity-fill ${pct>90?'capacity-high':pct>70?'capacity-med':'capacity-low'}" style="width:${pct}%"></div></div>
+            </div>
+        </div>`;
+    }).join('');
+    if(upcoming.length===0) container.innerHTML = '<p class="text-center text-slate-400 text-sm py-4">لا توجد رحلات قادمة خلال 48 ساعة</p>';
+}
+
+function getStatusClass(st){
+    const map={
+        'تم الإنشاء':'bg-slate-100 text-slate-700 border border-slate-200',
+        'تم القبول':'bg-blue-50 text-blue-700 border border-blue-200',
+        'استلام الشحنة':'bg-indigo-50 text-indigo-700 border border-indigo-200',
+        'تم إصدار AWB':'bg-sky-50 text-sky-700 border border-sky-200',
+        'وصلت إلى محطة التصدير':'bg-purple-50 text-purple-700 border border-purple-200',
+        'تم تحميلها على الرحلة':'bg-violet-50 text-violet-700 border border-violet-200',
+        'غادرت الرحلة':'bg-amber-50 text-amber-700 border border-amber-200',
+        'وصلت إلى محطة الترانزيت':'bg-orange-50 text-orange-700 border border-orange-200',
+        'وصلت إلى الوجهة':'bg-teal-50 text-teal-700 border border-teal-200',
+        'جاهزة للتسليم':'bg-emerald-50 text-emerald-700 border border-emerald-200',
+        'تم التسليم':'bg-green-50 text-green-700 border border-green-200',
+        'تم إغلاق الشحنة':'bg-gray-50 text-gray-700 border border-gray-200',
+        'قيد النقل':'bg-amber-50 text-amber-700 border border-amber-200',
+        'مستحقة':'bg-amber-50 text-amber-700 border border-amber-200',
+        'مسددة':'bg-emerald-50 text-emerald-700 border border-emerald-200'
+    };
+    return map[st]||'bg-slate-100 text-slate-700 border border-slate-200';
+}
+
+function renderCharts(){
+    if(revenueChartInstance){revenueChartInstance.destroy();revenueChartInstance=null;}
+    if(statusChartInstance){statusChartInstance.destroy();statusChartInstance=null;}
+    const ctx1=document.getElementById('revenueChart');
+    const ctx2=document.getElementById('statusChart');
+    if(!ctx1||!ctx2)return;
+    if(revenueChartInstance)revenueChartInstance.destroy();
+    if(statusChartInstance)statusChartInstance.destroy();
+
+    const months=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const year = parseInt(document.getElementById('chart-year').value)||2026;
+    const data1=months.map((_,i)=>db.invoices.filter(inv=>{const d=new Date(inv.date);return d.getMonth()===i&&d.getFullYear()===year;}).reduce((a,b)=>a+parseFloat(b.total),0));
+    revenueChartInstance=new Chart(ctx1,{type:'line',data:{labels:months,datasets:[{label:'الإيرادات (د.أ)',data:data1,borderColor:'#0ea5e9',backgroundColor:'rgba(14,165,233,0.1)',fill:true,tension:0.4,borderWidth:3,pointRadius:4,pointBackgroundColor:'#0ea5e9'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{family:'Cairo'}}},x:{grid:{display:false},ticks:{font:{family:'Cairo'}}}}}});
+
+    const sts=['تم الإنشاء','قيد النقل','وصلت إلى الوجهة','تم التسليم','تم إغلاق الشحنة'];
+    const data2=sts.map(st=>db.shipments.filter(s=>s.status===st).length);
+    statusChartInstance=new Chart(ctx2,{type:'doughnut',data:{labels:sts,datasets:[{data:data2,backgroundColor:['#94a3b8','#f59e0b','#14b8a6','#10b981','#64748b'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},cutout:'70%'}});
+}
+
+// ================= BOOKINGS =================
+function openBookingModal(){
+    document.getElementById('booking-form').reset();
+    document.getElementById('bk-number').value = 'BK-'+new Date().getFullYear()+'-'+(db.bookings.length+1).toString().padStart(5,'0');
+    document.getElementById('bk-date').value = getToday();
+    populateSelects();
+    document.getElementById('booking-modal').classList.remove('hidden');
+}
+
+function parseDimensions(dims){
+    if(!dims) return {l:0,w:0,h:0};
+    const parts = dims.split(/[x×X,]/).map(x=>parseFloat(x.trim())||0);
+    return {l:parts[0]||0,w:parts[1]||0,h:parts[2]||0};
+}
+
+function calculateVolumetricWeight(dims, actualWeight){
+    const d = parseDimensions(dims);
+    const vol = (d.l * d.w * d.h) / 6000;
+    return Math.max(actualWeight, vol);
+}
+
+function updateBookingTotal(){
+    const actual = parseFloat(document.getElementById('bk-weight').value)||0;
+    const dims = document.getElementById('bk-dims').value;
+    const chargeable = calculateVolumetricWeight(dims, actual);
+    const rate = parseFloat(document.getElementById('bk-rate').value)||0;
+    const handling = parseFloat(document.getElementById('bk-handling').value)||0;
+    const docs = parseFloat(document.getElementById('bk-docs').value)||0;
+    const freight = chargeable * rate;
+    const total = freight + handling + docs;
+    document.getElementById('bk-total').value = total.toFixed(2);
+}
+
+function saveBooking(e){
+    e.preventDefault();
+    const cust = db.customers.find(c=>c.id===document.getElementById('bk-customer').value);
+    const ag = db.agents.find(a=>a.id===document.getElementById('bk-agent').value);
+    const actualWeight = parseFloat(document.getElementById('bk-weight').value)||0;
+    const dims = document.getElementById('bk-dims').value;
+    const chargeableWeight = calculateVolumetricWeight(dims, actualWeight);
+    const rate = parseFloat(document.getElementById('bk-rate').value)||0;
+    const handling = parseFloat(document.getElementById('bk-handling').value)||0;
+    const docs = parseFloat(document.getElementById('bk-docs').value)||0;
+    const freight = chargeableWeight * rate;
+    const total = freight + handling + docs;
+
+    const b = {
+        id: generateId('BK'), number: document.getElementById('bk-number').value,
+        date: document.getElementById('bk-date').value,
+        customerId: cust?cust.id:'', customerName: cust?cust.name:'',
+        agentId: ag?ag.id:'', agentName: ag?ag.name:'',
+        shipper: document.getElementById('bk-shipper').value,
+        consignee: document.getElementById('bk-consignee').value,
+        origin: document.getElementById('bk-origin').value,
+        dest: document.getElementById('bk-dest').value,
+        airlineId: document.getElementById('bk-airline').value,
+        flight: document.getElementById('bk-flight').value,
+        pieces: parseInt(document.getElementById('bk-pieces').value)||1,
+        weight: actualWeight,
+        chargeableWeight: chargeableWeight,
+        dims: dims,
+        cargoType: document.getElementById('bk-cargo-type').value,
+        temp: document.getElementById('bk-temp').value,
+        notes: document.getElementById('bk-notes').value,
+        rate: rate, handling: handling, docs: docs,
+        freight: freight, total: total,
+        awbIssued: false, status: 'تم الإنشاء',
+        eta: document.getElementById('bk-eta').value
+    };
+    db.bookings.push(b);
+
+    // Create shipment with 12-step timeline
+    const s = {
+        id: generateId('SH'), bookingId: b.id, awbNumber: '', status: 'تم الإنشاء',
+        events: [
+            {step:1,title:'تم إنشاء الحجز',date:getNowISO(),done:true,location:''},
+            {step:2,title:'تم قبول الحجز',date:'',done:false,location:''},
+            {step:3,title:'استلام الشحنة',date:'',done:false,location:''},
+            {step:4,title:'تم إصدار AWB',date:'',done:false,location:''},
+            {step:5,title:'وصلت إلى محطة التصدير',date:'',done:false,location:''},
+            {step:6,title:'تم تحميلها على الرحلة',date:'',done:false,location:''},
+            {step:7,title:'غادرت الرحلة',date:'',done:false,location:''},
+            {step:8,title:'وصلت إلى محطة الترانزيت',date:'',done:false,location:''},
+            {step:9,title:'وصلت إلى الوجهة',date:'',done:false,location:''},
+            {step:10,title:'جاهزة للتسليم',date:'',done:false,location:''},
+            {step:11,title:'تم التسليم',date:'',done:false,location:''},
+            {step:12,title:'تم إغلاق الشحنة',date:'',done:false,location:''}
+        ],
+        createdAt: getNowISO()
+    };
+    db.shipments.push(s);
+
+    // Create invoice
+    const inv = {
+        id: generateId('INV'), number: 'INV-'+new Date().getFullYear()+'-'+(db.invoices.length+1).toString().padStart(4,'0'),
+        date: getToday(), bookingId: b.id, customerId: b.customerId,
+        total: total, status: 'مستحقة', paid: 0
+    };
+    db.invoices.push(inv);
+
+    // Update customer balance
+    if(cust){cust.balance = (parseFloat(cust.balance)||0) + total;}
+
+    addAuditLog('إنشاء حجز', 'Booking', 'رقم الحجز: '+b.number);
+    addNotification('حجز جديد', 'تم إنشاء حجز جديد: '+b.number+' - '+b.customerName, 'success');
+    saveDB();
+    closeModal('booking-modal');
+    renderBookings();
+    updateDashboard();
+    showToast('تم حفظ الحجز بنجاح!');
+}
+
+function renderBookings(){
+    const search = document.getElementById('booking-search').value.toLowerCase();
+    const tbody = document.getElementById('bookings-table');
+    const filtered = db.bookings.filter(b=>{
+        if(!search) return true;
+        return b.number.toLowerCase().includes(search) ||
+               b.customerName.toLowerCase().includes(search) ||
+               b.shipper.toLowerCase().includes(search) ||
+               (b.awbIssued && db.awb_documents.find(a=>a.bookingId===b.id)?.number.toLowerCase().includes(search));
+    });
+    if(filtered.length===0){tbody.innerHTML='';document.getElementById('bookings-empty').classList.remove('hidden');return;}
+    document.getElementById('bookings-empty').classList.add('hidden');
+    tbody.innerHTML = filtered.map(b=>{
+        const airline = db.airlines.find(a=>a.id==b.airlineId);
+        const awb = db.awb_documents.find(a=>a.bookingId===b.id);
+        return `<tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-4 font-bold text-sky-600">${b.number}</td>
+            <td class="px-4 py-4"><div class="font-medium text-sm">${b.customerName}</div><div class="text-[10px] text-slate-400">${b.agentName||'بدون وكيل'}</div></td>
+            <td class="px-4 py-4"><div class="text-sm">${b.shipper}</div><div class="text-xs text-slate-400">→ ${b.consignee}</div></td>
+            <td class="px-4 py-4"><div class="font-medium text-sm">${airline?airline.name:'-'}</div><div class="text-[10px] text-slate-400">${b.flight}</div></td>
+            <td class="px-4 py-4"><div class="text-sm">${b.chargeableWeight||b.weight} كغم</div><div class="text-[10px] text-slate-400">${b.dims||'-'}</div></td>
+            <td class="px-4 py-4 font-bold text-emerald-600 text-sm">${formatMoney(b.total)}</td>
+            <td class="px-4 py-4"><span class="status-badge ${getStatusClass(b.status)}">${b.status}</span></td>
+            <td class="px-4 py-4">
+                <button onclick="viewBooking('${b.id}')" class="text-sky-500 hover:text-sky-700 w-8 h-8 rounded-lg hover:bg-sky-50 transition" title="عرض"><i class="fas fa-eye"></i></button>
+                ${!b.awbIssued?`<button onclick="issueAWB('${b.id}')" class="text-emerald-500 hover:text-emerald-700 w-8 h-8 rounded-lg hover:bg-emerald-50 transition" title="إصدار AWB"><i class="fas fa-file-signature"></i></button>`:''}
+                <button onclick="deleteBooking('${b.id}')" class="text-red-400 hover:text-red-600 w-8 h-8 rounded-lg hover:bg-red-50 transition" title="حذف"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function viewBooking(id){
+    const b = db.bookings.find(x=>x.id===id);
+    if(!b) return;
+    alert(`تفاصيل الحجز: ${b.number}\nالعميل: ${b.customerName}\nالشاحن: ${b.shipper}\nالمستلم: ${b.consignee}\nالوزن: ${b.chargeableWeight||b.weight} كغم\nالإجمالي: ${formatMoney(b.total)} د.أ`);
+}
+
+function deleteBooking(id){
+    if(!confirm('هل أنت متأكد من حذف هذا الحجز؟ سيتم حذف جميع البيانات المرتبطة.')) return;
+    const b = db.bookings.find(x=>x.id===id);
+    if(b){
+        const cust = db.customers.find(c=>c.id===b.customerId);
+        if(cust){cust.balance = Math.max(0,(parseFloat(cust.balance)||0) - b.total);}
+    }
+    db.bookings = db.bookings.filter(b=>b.id!==id);
+    db.shipments = db.shipments.filter(s=>s.bookingId!==id);
+    db.awb_documents = db.awb_documents.filter(a=>a.bookingId!==id);
+    db.invoices = db.invoices.filter(i=>i.bookingId!==id);
+    addAuditLog('حذف حجز', 'Booking', 'معرف: '+id);
+    saveDB();
+    renderBookings();
+    updateDashboard();
+    showToast('تم حذف الحجز', 'warning');
+}
+
+function issueAWB(bookingId){
+    const b = db.bookings.find(x=>x.id===bookingId);
+    if(!b) return;
+    document.getElementById('awb-booking').value = bookingId;
+    fillAWBFromBooking();
+    openAWBModal();
+}
+
+// ================= AWB =================
+function openAWBModal(){populateSelects();document.getElementById('awb-modal').classList.remove('hidden');}
+function fillAWBFromBooking(){
+    const bid = document.getElementById('awb-booking').value;
+    const b = db.bookings.find(x=>x.id===bid);
+    if(!b) return;
+    document.getElementById('awb-shipper').value = b.shipper;
+    document.getElementById('awb-consignee').value = b.consignee;
+    document.getElementById('awb-weight').value = (b.chargeableWeight||b.weight) + ' كغم';
+    document.getElementById('awb-pieces').value = b.pieces;
+    document.getElementById('awb-dims').value = b.dims||'-';
+    document.getElementById('awb-desc').value = b.cargoType + (b.notes?' - '+b.notes:'');
+}
+
+function saveAWB(e){
+    e.preventDefault();
+    const bid = document.getElementById('awb-booking').value;
+    const b = db.bookings.find(x=>x.id===bid);
+    const awbNumber = document.getElementById('awb-number').value.trim();
+    if(!awbNumber){showToast('الرجاء إدخال رقم AWB','warning');return;}
+    if(db.awb_documents.some(x=>x.number===awbNumber)){showToast('رقم AWB مستخدم مسبقاً','error');return;}
+    if(db.awb_documents.some(x=>x.bookingId===bid)){showToast('تم إصدار AWB لهذا الحجز مسبقاً','error');return;}
+    const awb = {
+        id: generateId('AWB'), number: awbNumber,
+        type: document.getElementById('awb-type').value,
+        bookingId: bid, shipper: document.getElementById('awb-shipper').value,
+        consignee: document.getElementById('awb-consignee').value,
+        weight: document.getElementById('awb-weight').value,
+        pieces: document.getElementById('awb-pieces').value,
+        dims: document.getElementById('awb-dims').value,
+        value: document.getElementById('awb-value').value,
+        desc: document.getElementById('awb-desc').value,
+        date: getToday(), issuedBy: 'admin'
+    };
+    db.awb_documents.push(awb);
+    if(b){b.awbIssued=true;b.status='تم إصدار AWB';}
+    const sh = db.shipments.find(s=>s.bookingId===bid);
+    if(sh){sh.awbNumber=awb.number;sh.status='تم إصدار AWB';sh.events[3].date=getNowISO();sh.events[3].done=true;}
+    addAuditLog('إصدار AWB', 'AWB', 'رقم: '+awb.number);
+    addNotification('AWB جديد', 'تم إصدار بوليصة شحن: '+awb.number, 'info');
+    saveDB();
+    closeModal('awb-modal');
+    renderAWB(); renderBookings(); updateDashboard();
+    showToast('تم إصدار AWB بنجاح!');
+}
+
+function renderAWB(){
+    const tbody = document.getElementById('awb-table');
+    tbody.innerHTML = db.awb_documents.map(a=>{
+        const b = db.bookings.find(x=>x.id===a.bookingId);
+        return `<tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-4 font-bold text-sky-600 text-sm">${a.number}</td>
+            <td class="px-4 py-4"><span class="status-badge ${a.type==='Master'?'bg-violet-50 text-violet-700 border border-violet-200':'bg-pink-50 text-pink-700 border border-pink-200'}">${a.type}</span></td>
+            <td class="px-4 py-4 text-sm">${b?b.number:'-'}</td>
+            <td class="px-4 py-4 text-sm">${a.shipper}</td>
+            <td class="px-4 py-4 text-sm">${a.consignee}</td>
+            <td class="px-4 py-4 text-sm">${a.weight}</td>
+            <td class="px-4 py-4 text-sm">${formatMoney(a.value)} د.أ</td>
+            <td class="px-4 py-4 text-sm">${formatDate(a.date)}</td>
+            <td class="px-4 py-4">
+                <button onclick="downloadAWB('${a.id}')" class="text-sky-500 hover:text-sky-700 w-8 h-8 rounded-lg hover:bg-sky-50 transition" title="تحميل PDF"><i class="fas fa-file-pdf"></i></button>
+                <button onclick="printAWB('${a.id}')" class="text-slate-500 hover:text-slate-700 w-8 h-8 rounded-lg hover:bg-slate-50 transition" title="طباعة"><i class="fas fa-print"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function downloadAWB(id){
+    const a = db.awb_documents.find(x=>x.id===id); if(!a)return;
+    const {jsPDF} = window.jspdf;
+    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    doc.setFontSize(20); doc.text('Air Waybill (AWB)',105,20,{align:'center'});
+    doc.setFontSize(12); doc.text('AirCargo Manager Pro - e-AWB System',105,28,{align:'center'});
+    doc.setDrawColor(200); doc.line(20,32,190,32);
+    doc.setFontSize(14); doc.text('AWB Number: '+a.number,20,42);
+    doc.setFontSize(11);
+    doc.text('Type: '+a.type,20,50);
+    doc.text('Shipper: '+a.shipper,20,58);
+    doc.text('Consignee: '+a.consignee,20,66);
+    doc.text('Weight: '+a.weight,20,74);
+    doc.text('Pieces: '+a.pieces,20,82);
+    doc.text('Dimensions: '+(a.dims||'-'),20,90);
+    doc.text('Declared Value: '+a.value+' JOD',20,98);
+    doc.text('Description: '+(a.desc||'-'),20,106);
+    doc.text('Date: '+formatDate(a.date),20,118);
+    doc.text('Issued By: '+a.issuedBy,20,126);
+    doc.setDrawColor(200); doc.line(20,132,190,132);
+    doc.setFontSize(9); doc.text('This is an electronic Air Waybill (e-AWB) issued in accordance with IATA e-freight standards.',105,140,{align:'center'});
+    doc.save('AWB-'+a.number+'.pdf');
+    showToast('تم تحميل ملف PDF');
+}
+function printAWB(id){downloadAWB(id);}
+
+// ================= TRACKING =================
+function trackShipment(){
+    const search = document.getElementById('tracking-search').value.trim();
+    if(!search){showToast('الرجاء إدخال رقم AWB','warning');return;}
+    const sh = db.shipments.find(s=>s.awbNumber===search) || db.shipments.find(s=>{const b=db.bookings.find(x=>x.id===s.bookingId);return b&&b.number===search;});
+    if(!sh){showToast('لم يتم العثور على الشحنة','error');return;}
+    const b = db.bookings.find(x=>x.id===sh.bookingId);
+    document.getElementById('tracking-empty').classList.add('hidden');
+    document.getElementById('tracking-result').classList.remove('hidden');
+    document.getElementById('track-awb').textContent = sh.awbNumber || b.number;
+    document.getElementById('track-last-update').textContent = formatDateTime(new Date());
+    document.getElementById('track-status-badge').textContent = sh.status;
+    document.getElementById('track-status-badge').className = 'inline-block px-4 py-2 rounded-full text-sm font-bold mb-2 ' + getStatusClass(sh.status).replace('status-badge','');
+    document.getElementById('track-customer').textContent = b?b.customerName:'-';
+    document.getElementById('track-weight').textContent = b?(b.chargeableWeight||b.weight)+' كغم':'-';
+    const nextIdx = sh.events.findIndex(e=>!e.done);
+    document.getElementById('track-next').textContent = nextIdx>=0?sh.events[nextIdx].title:'مكتملة';
+    document.getElementById('track-eta').textContent = b&&b.eta?formatDate(b.eta):formatDate(new Date(new Date(b.date).getTime()+3*86400000));
+
+    const container = document.getElementById('timeline-container');
+    container.innerHTML = '<div class="timeline-line"></div>';
+    sh.events.forEach((ev,idx)=>{
+        const div = document.createElement('div');
+        div.className = 'relative mb-8 pr-10';
+        const isActive = idx===nextIdx;
+        const isDone = ev.done;
+        div.innerHTML = `<div class="timeline-dot ${isDone?'completed':(isActive?'active':'pending')}" style="top:4px;"></div>
+            <div class="bg-white border ${isDone?'border-emerald-200 bg-emerald-50':(isActive?'border-amber-200 bg-amber-50':'border-slate-200')} rounded-xl p-4 shadow-sm">
+                <div class="flex justify-between items-center mb-1">
+                    <h4 class="font-bold ${isDone?'text-emerald-700':(isActive?'text-amber-700':'text-slate-500')} text-sm">${ev.title}</h4>
+                    ${isDone?'<i class="fas fa-check-circle text-emerald-500"></i>':(isActive?'<i class="fas fa-clock text-amber-500 animate-pulse"></i>':'<i class="fas fa-circle text-slate-300 text-xs"></i>')}
+                </div>
+                <p class="text-xs text-slate-400">${ev.date?formatDateTime(ev.date):'في الانتظار'} ${ev.location?'| '+ev.location:''}</p>
+            </div>`;
+        container.appendChild(div);
+    });
+}
+
+function viewShipment(id){
+    const sh = db.shipments.find(s=>s.id===id);
+    if(sh){document.getElementById('tracking-search').value=sh.awbNumber||'';trackShipment();showSection('shipments');}
+}
+
+// ================= FLIGHTS =================
+function openFlightModal(){document.getElementById('flight-form').reset();populateSelects();document.getElementById('flight-modal').classList.remove('hidden');}
+function saveFlight(e){
+    e.preventDefault();
+    const al = db.airlines.find(a=>a.id==document.getElementById('fl-airline').value);
+    const f = {
+        id: generateId('FL'), number: document.getElementById('fl-number').value,
+        airlineId: document.getElementById('fl-airline').value, airlineName: al?al.name:'',
+        origin: document.getElementById('fl-origin').value,
+        dest: document.getElementById('fl-dest').value,
+        departure: document.getElementById('fl-departure').value,
+        arrival: document.getElementById('fl-arrival').value,
+        aircraft: document.getElementById('fl-aircraft').value,
+        capacity: parseFloat(document.getElementById('fl-capacity').value)||0
+    };
+    db.flights.push(f);
+    addAuditLog('إضافة رحلة', 'Flight', f.number);
+    saveDB(); closeModal('flight-modal'); renderFlights(); updateDashboard();
+    showToast('تم حفظ الرحلة بنجاح!');
+}
+
+function renderFlights(){
+    const grid = document.getElementById('flights-grid');
+    grid.innerHTML = db.flights.map(f=>{
+        const used = db.bookings.filter(b=>b.flight===f.number).reduce((a,b)=>a+(parseFloat(b.chargeableWeight||b.weight)||0),0);
+        const pct = f.capacity?Math.min(100,Math.round((used/f.capacity)*100)):0;
+        const capClass = pct>90?'capacity-high':pct>70?'capacity-med':'capacity-low';
+        const capText = pct>90?'text-red-600':pct>70?'text-amber-600':'text-emerald-600';
+        const now = new Date();
+        const dep = new Date(f.departure);
+        const isPast = dep < now;
+        return `<div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 card-hover ${isPast?'opacity-75':''}">
+            <div class="flex justify-between items-start mb-4">
+                <div><h4 class="text-lg font-bold text-slate-900">${f.number}</h4><p class="text-sm text-slate-500">${f.airlineName}</p></div>
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-100">${f.aircraft}</span>
+            </div>
+            <div class="flex items-center gap-4 mb-4 text-sm">
+                <div class="text-center"><div class="font-bold text-slate-900 text-lg">${f.origin}</div><div class="text-xs text-slate-400">${formatDateTime(f.departure).split(' ')[0]}</div><div class="text-[10px] text-slate-400">${formatDateTime(f.departure).split(' ')[1]||''}</div></div>
+                <div class="flex-1 border-b-2 border-dashed border-slate-200 relative"><i class="fas fa-plane text-sky-400 absolute left-1/2 -translate-x-1/2 -top-2.5 bg-white px-1"></i></div>
+                <div class="text-center"><div class="font-bold text-slate-900 text-lg">${f.dest}</div><div class="text-xs text-slate-400">${formatDateTime(f.arrival).split(' ')[0]}</div><div class="text-[10px] text-slate-400">${formatDateTime(f.arrival).split(' ')[1]||''}</div></div>
+            </div>
+            <div class="mb-2 flex justify-between text-sm"><span class="text-slate-500 font-medium">السعة المستخدمة</span><span class="font-bold ${capText}">${pct}%</span></div>
+            <div class="w-full capacity-bar mb-3"><div class="capacity-fill ${capClass}" style="width:${pct}%"></div></div>
+            <div class="flex justify-between text-xs text-slate-400"><span>${used.toFixed(0)} كغم مستخدمة</span><span>${f.capacity} كغم إجمالي</span></div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                <button onclick="deleteFlight('${f.id}')" class="text-xs text-red-500 hover:text-red-700 font-bold px-3 py-1.5 rounded-lg hover:bg-red-50 transition border border-red-100">حذف</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function deleteFlight(id){
+    if(!confirm('هل أنت متأكد من حذف هذه الرحلة؟'))return;
+    db.flights = db.flights.filter(f=>f.id!==id);
+    addAuditLog('حذف رحلة', 'Flight', 'معرف: '+id);
+    saveDB(); renderFlights(); updateDashboard();
+    showToast('تم حذف الرحلة','warning');
+}
+
+// ================= CUSTOMERS & AGENTS =================
+function openCustomerModal(){document.getElementById('customer-form').reset();document.getElementById('customer-modal').classList.remove('hidden');}
+function openAgentModal(){document.getElementById('agent-form').reset();document.getElementById('agent-modal').classList.remove('hidden');}
+function saveCustomer(e){
+    e.preventDefault();
+    db.customers.push({
+        id: generateId('CUST'), name: document.getElementById('cust-name').value,
+        type: document.getElementById('cust-type').value, phone: document.getElementById('cust-phone').value,
+        email: document.getElementById('cust-email').value, address: document.getElementById('cust-address').value,
+        balance: 0
+    });
+    addAuditLog('إضافة عميل', 'Customer', document.getElementById('cust-name').value);
+    saveDB(); closeModal('customer-modal'); renderCustomers(); populateSelects();
+    showToast('تم إضافة العميل بنجاح!');
+}
+function saveAgent(e){
+    e.preventDefault();
+    db.agents.push({
+        id: generateId('AG'), name: document.getElementById('agent-name').value,
+        areas: document.getElementById('agent-areas').value,
+        commission: parseFloat(document.getElementById('agent-commission').value)||0,
+        bookingsCount: 0
+    });
+    addAuditLog('إضافة وكيل', 'Agent', document.getElementById('agent-name').value);
+    saveDB(); closeModal('agent-modal'); renderAgents(); populateSelects();
+    showToast('تم إضافة الوكيل بنجاح!');
+}
+function renderCustomers(){
+    document.getElementById('customers-table').innerHTML = db.customers.map(c=>{
+        const bookingsCount = db.bookings.filter(b=>b.customerId===c.id).length;
+        return `<tr class="hover:bg-slate-50 transition">
+            <td class="px-3 py-3 font-medium text-sm">${c.name}</td>
+            <td class="px-3 py-3 text-xs"><span class="status-badge bg-slate-100 text-slate-600 border border-slate-200">${c.type}</span></td>
+            <td class="px-3 py-3 text-xs">${c.phone}</td>
+            <td class="px-3 py-3 text-xs font-bold ${c.balance>0?'text-amber-600':'text-emerald-600'}">${formatMoney(c.balance)}</td>
+            <td class="px-3 py-3 text-xs">${bookingsCount} حجز</td>
+        </tr>`;
+    }).join('');
+}
+function renderAgents(){
+    document.getElementById('agents-table').innerHTML = db.agents.map(a=>{
+        const bookingsCount = db.bookings.filter(b=>b.agentId===a.id).length;
+        const totalCommission = db.bookings.filter(b=>b.agentId===a.id).reduce((sum,b)=>sum+(b.total*(a.commission/100)),0);
+        return `<tr class="hover:bg-slate-50 transition">
+            <td class="px-3 py-3 font-medium text-sm">${a.name}</td>
+            <td class="px-3 py-3 text-xs">${a.areas}</td>
+            <td class="px-3 py-3 text-xs font-bold text-indigo-600">${a.commission}%</td>
+            <td class="px-3 py-3 text-xs">${bookingsCount} حجز | ${formatMoney(totalCommission)} د.أ</td>
+        </tr>`;
+    }).join('');
+}
+
+// ================= PRICING =================
+function calculatePrice(){
+    const actual = parseFloat(document.getElementById('calc-actual-weight').value)||0;
+    const l = parseFloat(document.getElementById('calc-l').value)||0;
+    const w = parseFloat(document.getElementById('calc-w').value)||0;
+    const h = parseFloat(document.getElementById('calc-h').value)||0;
+    const rate = parseFloat(document.getElementById('calc-rate').value)||0;
+    const handling = parseFloat(document.getElementById('calc-handling').value)||0;
+    const docs = parseFloat(document.getElementById('calc-docs').value)||0;
+    const taxRate = parseFloat(document.getElementById('calc-tax').value)||0;
+
+    const vol = (l*w*h)/6000;
+    const chargeable = Math.max(actual,vol);
+    const freight = chargeable*rate;
+    const subtotal = freight+handling+docs;
+    const tax = subtotal*(taxRate/100);
+    const total = subtotal+tax;
+
+    document.getElementById('res-volumetric').textContent = vol.toFixed(2)+' كغم';
+    document.getElementById('res-chargeable').textContent = chargeable.toFixed(2)+' كغم';
+    document.getElementById('res-freight').textContent = freight.toFixed(2)+' د.أ';
+    document.getElementById('res-subtotal').textContent = subtotal.toFixed(2)+' د.أ';
+    document.getElementById('res-tax').textContent = tax.toFixed(2)+' د.أ';
+    document.getElementById('res-total').textContent = total.toFixed(2)+' د.أ';
+}
+
+function renderInvoices(){
+    const list = document.getElementById('invoices-list');
+    list.innerHTML = db.invoices.slice(-5).reverse().map(i=>{
+        const cust = db.customers.find(c=>c.id===i.customerId);
+        return `<div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div><div class="font-medium text-sm">${i.number}</div><div class="text-[10px] text-slate-400">${cust?cust.name:'-'} | ${formatDate(i.date)}</div></div>
+            <div class="text-right"><div class="font-bold text-emerald-600 text-sm">${formatMoney(i.total)}</div><span class="text-[10px] px-2 py-0.5 rounded-full ${i.status==='مسددة'?'bg-emerald-50 text-emerald-600 border border-emerald-100':'bg-amber-50 text-amber-600 border border-amber-100'}">${i.status}</span></div>
+        </div>`;
+    }).join('');
+}
+
+function renderCommissions(){
+    const list = document.getElementById('commissions-list');
+    const commissions = [];
+    db.agents.forEach(a=>{
+        const agentBookings = db.bookings.filter(b=>b.agentId===a.id);
+        const total = agentBookings.reduce((sum,b)=>sum+(b.total*(a.commission/100)),0);
+        if(total>0) commissions.push({agent:a.name,total:total,count:agentBookings.length});
+    });
+    list.innerHTML = commissions.slice(0,5).map(c=>`
+        <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <div><div class="font-medium text-sm">${c.agent}</div><div class="text-[10px] text-slate-400">${c.count} حجز</div></div>
+            <div class="font-bold text-purple-600 text-sm">${formatMoney(c.total)} د.أ</div>
+        </div>
+    `).join('');
+    if(commissions.length===0) list.innerHTML = '<p class="text-center text-slate-400 text-xs py-4">لا توجد عمولات مسجلة</p>';
+}
+
+// ================= REPORTS =================
+function generateReport(type){
+    currentReportType = type;
+    const preview = document.getElementById('report-preview');
+    const content = document.getElementById('report-content');
+    const title = document.getElementById('report-title');
+    preview.classList.remove('hidden');
+    if(type==='bookings'){
+        title.textContent = 'تقرير الحجوزات';
+        content.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-sm border border-slate-200" id="report-table">
+            <thead class="bg-slate-50"><tr><th class="border p-2 font-bold">رقم الحجز</th><th class="border p-2 font-bold">العميل</th><th class="border p-2 font-bold">الشاحن</th><th class="border p-2 font-bold">الرحلة</th><th class="border p-2 font-bold">الوزن</th><th class="border p-2 font-bold">المبلغ</th><th class="border p-2 font-bold">الحالة</th></tr></thead>
+            <tbody>`+db.bookings.map(b=>`<tr><td class="border p-2">${b.number}</td><td class="border p-2">${b.customerName}</td><td class="border p-2">${b.shipper}</td><td class="border p-2">${b.flight}</td><td class="border p-2">${b.chargeableWeight||b.weight}</td><td class="border p-2">${formatMoney(b.total)}</td><td class="border p-2">${b.status}</td></tr>`).join('')+`</tbody></table></div>`;
+    }else if(type==='revenue'){
+        title.textContent = 'تقرير الإيرادات';
+        const total = db.invoices.reduce((a,i)=>a+parseFloat(i.total),0);
+        const paid = db.invoices.filter(i=>i.status==='مسددة').reduce((a,i)=>a+parseFloat(i.total),0);
+        const due = db.invoices.filter(i=>i.status==='مستحقة').reduce((a,i)=>a+parseFloat(i.total),0);
+        content.innerHTML = `<div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-emerald-50 p-4 rounded-xl text-center border border-emerald-100"><div class="text-2xl font-black text-emerald-700">${formatMoney(total)}</div><div class="text-xs text-emerald-600 font-bold">إجمالي الإيرادات</div></div>
+            <div class="bg-blue-50 p-4 rounded-xl text-center border border-blue-100"><div class="text-2xl font-black text-blue-700">${db.invoices.length}</div><div class="text-xs text-blue-600 font-bold">عدد الفواتير</div></div>
+            <div class="bg-amber-50 p-4 rounded-xl text-center border border-amber-100"><div class="text-2xl font-black text-amber-700">${formatMoney(due)}</div><div class="text-xs text-amber-600 font-bold">مبالغ مستحقة</div></div>
+        </div>
+        <div class="overflow-x-auto"><table class="w-full text-sm border border-slate-200" id="report-table">
+            <thead class="bg-slate-50"><tr><th class="border p-2 font-bold">رقم الفاتورة</th><th class="border p-2 font-bold">التاريخ</th><th class="border p-2 font-bold">العميل</th><th class="border p-2 font-bold">المبلغ</th><th class="border p-2 font-bold">الحالة</th></tr></thead>
+            <tbody>`+db.invoices.map(i=>`<tr><td class="border p-2">${i.number}</td><td class="border p-2">${formatDate(i.date)}</td><td class="border p-2">${db.customers.find(c=>c.id===i.customerId)?.name||'-'}</td><td class="border p-2">${formatMoney(i.total)}</td><td class="border p-2">${i.status}</td></tr>`).join('')+`</tbody></table></div>`;
+    }else if(type==='shipments'){
+        title.textContent = 'تقرير الشحنات';
+        const sts = {}; db.shipments.forEach(s=>{sts[s.status]=(sts[s.status]||0)+1;});
+        content.innerHTML = `<div class="grid grid-cols-2 gap-4 mb-6">`+Object.entries(sts).map(([k,v])=>`
+            <div class="flex justify-between p-3 bg-slate-50 rounded-xl border border-slate-100"><span class="font-medium text-sm">${k}</span><span class="font-black text-slate-900">${v}</span></div>
+        `).join('')+`</div>
+        <div class="overflow-x-auto"><table class="w-full text-sm border border-slate-200" id="report-table">
+            <thead class="bg-slate-50"><tr><th class="border p-2 font-bold">رقم AWB</th><th class="border p-2 font-bold">الحالة</th><th class="border p-2 font-bold">الخطوة الحالية</th><th class="border p-2 font-bold">تاريخ الإنشاء</th></tr></thead>
+            <tbody>`+db.shipments.map(s=>`<tr><td class="border p-2">${s.awbNumber||'-'}</td><td class="border p-2">${s.status}</td><td class="border p-2">${s.events.find(e=>!e.done)?.title||'مكتملة'}</td><td class="border p-2">${formatDateTime(s.createdAt)}</td></tr>`).join('')+`</tbody></table></div>`;
+    }
+}
+
+function exportReportExcel(){
+    const table = document.getElementById('report-table');
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table, {sheet: "Report"});
+    XLSX.writeFile(wb, `report_${currentReportType}_${getToday()}.xlsx`);
+    showToast('تم تصدير التقرير إلى Excel');
+}
+
+function printReport(){window.print();}
+
+// ================= AUDIT =================
+function renderAuditLogs(){
+    const tbody = document.getElementById('audit-table');
+    tbody.innerHTML = db.audit_logs.slice(0,50).map(log=>`
+        <tr class="hover:bg-slate-50 transition">
+            <td class="px-4 py-3 text-xs text-slate-500">${formatDateTime(log.timestamp)}</td>
+            <td class="px-4 py-3 text-xs font-bold">${log.user}</td>
+            <td class="px-4 py-3 text-xs"><span class="status-badge bg-slate-100 text-slate-600 border border-slate-200">${log.action}</span></td>
+            <td class="px-4 py-3 text-xs">${log.entity}</td>
+            <td class="px-4 py-3 text-xs text-slate-500">${log.details}</td>
+        </tr>
+    `).join('');
+}
+
+function clearAuditLogs(){
+    if(!confirm('هل أنت متأكد من مسح سجل العمليات؟'))return;
+    db.audit_logs = [];
+    saveDB(); renderAuditLogs();
+    showToast('تم مسح السجل','warning');
+}
+
+// ================= EXPORT/IMPORT =================
+function exportDatabase(){
+    const dataStr = JSON.stringify(db, null, 2);
+    const blob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `aircargo_backup_${getToday()}.json`; a.click();
+    URL.revokeObjectURL(url);
+    showToast('تم تصدير قاعدة البيانات');
+}
+
+function importDatabase(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+        try{
+            const data = JSON.parse(ev.target.result);
+            if(data.bookings && data.shipments){
+                const requiredArrays=['customers','agents','flights','bookings','shipments','awb_documents','invoices','payments','commissions','notifications','audit_logs','airlines','airports'];
+                if(requiredArrays.some(key=>data[key]!==undefined&&!Array.isArray(data[key]))) throw new Error('Invalid database shape');
+                db = {...db,...data};
+                saveDB();
+                populateSelects();
+                updateDashboard();
+                renderBookings(); renderAWB(); renderFlights(); renderCustomers(); renderAgents(); renderInvoices(); renderCommissions(); renderAuditLogs();
+                showToast('تم استيراد قاعدة البيانات بنجاح!');
+            }else{showToast('ملف غير صالح','error');}
+        }catch(err){showToast('خطأ في قراءة الملف','error');}
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+}
+
+function exportBookingsExcel(){
+    const data = db.bookings.map(b=>({
+        'رقم الحجز': b.number, 'التاريخ': b.date, 'العميل': b.customerName, 'الوكيل': b.agentName||'',
+        'الشاحن': b.shipper, 'المستلم': b.consignee, 'من': b.origin, 'إلى': b.dest,
+        'الرحلة': b.flight, 'الطرود': b.pieces, 'الوزن': b.weight, 'الوزن المحتسب': b.chargeableWeight||b.weight,
+        'الأبعاد': b.dims, 'نوع البضاعة': b.cargoType, 'السعر': b.total, 'الحالة': b.status
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Bookings");
+    XLSX.writeFile(wb, `bookings_${getToday()}.xlsx`);
+    showToast('تم تصدير الحجوزات إلى Excel');
+}
+
+function exportAWBExcel(){
+    const data = db.awb_documents.map(a=>({
+        'رقم AWB': a.number, 'النوع': a.type, 'الشاحن': a.shipper, 'المستلم': a.consignee,
+        'الوزن': a.weight, 'الطرود': a.pieces, 'القيمة': a.value, 'التاريخ': a.date
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "AWB");
+    XLSX.writeFile(wb, `awb_${getToday()}.xlsx`);
+    showToast('تم تصدير AWB إلى Excel');
+}
+
+// ================= SEED DATA =================
+function seedData(){
+    if(db.bookings.length>0 && !confirm('سيتم استبدال البيانات الحالية ببيانات تجريبية. متابعة؟')) return;
+    db.customers = [
+        {id:'C1',name:'شركة النور للتجارة',type:'تاجر',phone:'0791234567',email:'info@noor.com',address:'عمّان - شارع الملك حسين',balance:0},
+        {id:'C2',name:'مصنع الأفق للصناعات',type:'مصنع',phone:'0787654321',email:'factory@afaq.com',address:'الزرقاء - المنطقة الصناعية',balance:0},
+        {id:'C3',name:'مؤسسة البحرين الدولية للشحن',type:'شركة شحن',phone:'0771122334',email:'contact@bahrain-int.com',address:'عمّان - عبدون',balance:0},
+        {id:'C4',name:'شركة الخليج المحدودة',type:'تاجر',phone:'0799876543',email:'gulf@co.com',address:'دبي - المنطقة الحرة',balance:0}
+    ];
+    db.agents = [
+        {id:'A1',name:'مكتب الأفق للشحن',areas:'عمّان، دبي، الرياض',commission:5,bookingsCount:0},
+        {id:'A2',name:'الوكيل الذهبي',areas:'الكويت، الدوحة، البحرين',commission:7,bookingsCount:0},
+        {id:'A3',name:'مكتب السفير للخدمات اللوجستية',areas:'عمّان، بيروت، بغداد',commission:4,bookingsCount:0}
+    ];
+    db.flights = [
+        {id:'F1',number:'RJ 610',airlineId:'RJ',airlineName:'الملكية الأردنية',origin:'AMM',dest:'DXB',departure:'2026-08-28T14:00',arrival:'2026-08-28T18:30',aircraft:'Boeing 787-9 Dreamliner',capacity:25000},
+        {id:'F2',number:'EK 901',airlineId:'EK',airlineName:'الإمارات',origin:'DXB',dest:'AMM',departure:'2026-08-29T09:15',arrival:'2026-08-29T11:45',aircraft:'Airbus A380-800',capacity:45000},
+        {id:'F3',number:'QR 401',airlineId:'QR',airlineName:'القطرية',origin:'AMM',dest:'DOH',departure:'2026-08-30T16:00',arrival:'2026-08-30T18:20',aircraft:'Boeing 777-300ER',capacity:35000},
+        {id:'F4',number:'RJ 710',airlineId:'RJ',airlineName:'الملكية الأردنية',origin:'AMM',dest:'RUH',departure:'2026-08-27T10:00',arrival:'2026-08-27T12:30',aircraft:'Airbus A320',capacity:18000},
+        {id:'F5',number:'TK 812',airlineId:'TK',airlineName:'التركية',origin:'AMM',dest:'IST',departure:'2026-08-29T06:30',arrival:'2026-08-29T09:45',aircraft:'Boeing 737-800',capacity:22000}
+    ];
+    db.bookings = [
+        {id:'B1',number:'BK-2026-000145',date:'2026-08-25',customerId:'C1',customerName:'شركة النور للتجارة',agentId:'A1',agentName:'مكتب الأفق للشحن',shipper:'شركة النور للتجارة',consignee:'شركة الخليج المحدودة',origin:'AMM',dest:'DXB',airlineId:'RJ',flight:'RJ 610',pieces:8,weight:96,chargeableWeight:96,dims:'50×60×80',cargoType:'مستلزمات إلكترونية',temp:'',notes:'تسليم عاجل - يتطلب تعبئة خاصة',rate:1.85,handling:35,docs:10,freight:177.6,total:222.6,awbIssued:true,status:'تم إصدار AWB',eta:'2026-08-30'},
+        {id:'B2',number:'BK-2026-000146',date:'2026-08-25',customerId:'C2',customerName:'مصنع الأفق للصناعات',agentId:'',agentName:'',shipper:'مصنع الأفق للصناعات',consignee:'مستودع القاهرة الدولي',origin:'AMM',dest:'CAI',airlineId:'TK',flight:'TK 812',pieces:12,weight:420,chargeableWeight:420,dims:'100×80×60',cargoType:'مواد غذائية',temp:'2-8°C',notes:'مبردة - يتطلب مراقبة حرارية مستمرة',rate:1.65,handling:45,docs:10,freight:693,total:748,awbIssued:false,status:'تم الإنشاء',eta:'2026-09-02'},
+        {id:'B3',number:'BK-2026-000147',date:'2026-08-26',customerId:'C3',customerName:'مؤسسة البحرين الدولية للشحن',agentId:'A2',agentName:'الوكيل الذهبي',shipper:'مؤسسة البحرين الدولية',consignee:'شركة الرياض للتوزيع',origin:'AMM',dest:'RUH',airlineId:'RJ',flight:'RJ 710',pieces:5,weight:150,chargeableWeight:150,dims:'70×50×40',cargoType:'عامة',temp:'',notes:'',rate:2.1,handling:35,docs:10,freight:315,total:360,awbIssued:true,status:'قيد النقل',eta:'2026-08-29'},
+        {id:'B4',number:'BK-2026-000148',date:'2026-08-26',customerId:'C1',customerName:'شركة النور للتجارة',agentId:'A1',agentName:'مكتب الأفق للشحن',shipper:'شركة النور للتجارة',consignee:'مستودع الدوحة المركزي',origin:'AMM',dest:'DOH',airlineId:'QR',flight:'QR 401',pieces:3,weight:45,chargeableWeight:45,dims:'40×40×30',cargoType:'أدوية',temp:'15-25°C',notes:'أدوية حساسة للحرارة',rate:2.5,handling:35,docs:10,freight:112.5,total:157.5,awbIssued:true,status:'وصلت إلى محطة التصدير',eta:'2026-08-31'}
+    ];
+    db.shipments = [
+        {id:'S1',bookingId:'B1',awbNumber:'123-45678901',status:'تم إصدار AWB',events:[
+            {step:1,title:'تم إنشاء الحجز',date:'2026-08-25T09:00:00',done:true,location:'عمّان'},
+            {step:2,title:'تم قبول الحجز',date:'2026-08-25T10:30:00',done:true,location:'عمّان'},
+            {step:3,title:'استلام الشحنة',date:'2026-08-25T12:00:00',done:true,location:'مستودع عمّان'},
+            {step:4,title:'تم إصدار AWB',date:'2026-08-25T14:20:00',done:true,location:'مكتب الشحن'},
+            {step:5,title:'وصلت إلى محطة التصدير',date:'',done:false,location:''},
+            {step:6,title:'تم تحميلها على الرحلة',date:'',done:false,location:''},
+            {step:7,title:'غادرت الرحلة',date:'',done:false,location:''},
+            {step:8,title:'وصلت إلى محطة الترانزيت',date:'',done:false,location:''},
+            {step:9,title:'وصلت إلى الوجهة',date:'',done:false,location:''},
+            {step:10,title:'جاهزة للتسليم',date:'',done:false,location:''},
+            {step:11,title:'تم التسليم',date:'',done:false,location:''},
+            {step:12,title:'تم إغلاق الشحنة',date:'',done:false,location:''}
+        ], createdAt:'2026-08-25T09:00:00'},
+        {id:'S2',bookingId:'B2',awbNumber:'',status:'تم الإنشاء',events:[
+            {step:1,title:'تم إنشاء الحجز',date:'2026-08-25T11:00:00',done:true,location:'عمّان'},
+            {step:2,title:'تم قبول الحجز',date:'',done:false,location:''},
+            {step:3,title:'استلام الشحنة',date:'',done:false,location:''},
+            {step:4,title:'تم إصدار AWB',date:'',done:false,location:''},
+            {step:5,title:'وصلت إلى محطة التصدير',date:'',done:false,location:''},
+            {step:6,title:'تم تحميلها على الرحلة',date:'',done:false,location:''},
+            {step:7,title:'غادرت الرحلة',date:'',done:false,location:''},
+            {step:8,title:'وصلت إلى محطة الترانزيت',date:'',done:false,location:''},
+            {step:9,title:'وصلت إلى الوجهة',date:'',done:false,location:''},
+            {step:10,title:'جاهزة للتسليم',date:'',done:false,location:''},
+            {step:11,title:'تم التسليم',date:'',done:false,location:''},
+            {step:12,title:'تم إغلاق الشحنة',date:'',done:false,location:''}
+        ], createdAt:'2026-08-25T11:00:00'},
+        {id:'S3',bookingId:'B3',awbNumber:'123-45678902',status:'قيد النقل',events:[
+            {step:1,title:'تم إنشاء الحجز',date:'2026-08-26T08:00:00',done:true,location:'عمّان'},
+            {step:2,title:'تم قبول الحجز',date:'2026-08-26T09:00:00',done:true,location:'عمّان'},
+            {step:3,title:'استلام الشحنة',date:'2026-08-26T10:30:00',done:true,location:'مستودع عمّان'},
+            {step:4,title:'تم إصدار AWB',date:'2026-08-26T11:00:00',done:true,location:'مكتب الشحن'},
+            {step:5,title:'وصلت إلى محطة التصدير',date:'2026-08-26T13:00:00',done:true,location:'مطار الملكة علياء'},
+            {step:6,title:'تم تحميلها على الرحلة',date:'2026-08-26T14:00:00',done:true,location:'مطار الملكة علياء'},
+            {step:7,title:'غادرت الرحلة',date:'2026-08-26T16:00:00',done:true,location:'مطار الملكة علياء'},
+            {step:8,title:'وصلت إلى محطة الترانزيت',date:'',done:false,location:''},
+            {step:9,title:'وصلت إلى الوجهة',date:'',done:false,location:''},
+            {step:10,title:'جاهزة للتسليم',date:'',done:false,location:''},
+            {step:11,title:'تم التسليم',date:'',done:false,location:''},
+            {step:12,title:'تم إغلاق الشحنة',date:'',done:false,location:''}
+        ], createdAt:'2026-08-26T08:00:00'},
+        {id:'S4',bookingId:'B4',awbNumber:'123-45678903',status:'وصلت إلى محطة التصدير',events:[
+            {step:1,title:'تم إنشاء الحجز',date:'2026-08-26T09:30:00',done:true,location:'عمّان'},
+            {step:2,title:'تم قبول الحجز',date:'2026-08-26T10:00:00',done:true,location:'عمّان'},
+            {step:3,title:'استلام الشحنة',date:'2026-08-26T11:30:00',done:true,location:'مستودع عمّان'},
+            {step:4,title:'تم إصدار AWB',date:'2026-08-26T13:00:00',done:true,location:'مكتب الشحن'},
+            {step:5,title:'وصلت إلى محطة التصدير',date:'2026-08-26T15:00:00',done:true,location:'مطار الملكة علياء'},
+            {step:6,title:'تم تحميلها على الرحلة',date:'',done:false,location:''},
+            {step:7,title:'غادرت الرحلة',date:'',done:false,location:''},
+            {step:8,title:'وصلت إلى محطة الترانزيت',date:'',done:false,location:''},
+            {step:9,title:'وصلت إلى الوجهة',date:'',done:false,location:''},
+            {step:10,title:'جاهزة للتسليم',date:'',done:false,location:''},
+            {step:11,title:'تم التسليم',date:'',done:false,location:''},
+            {step:12,title:'تم إغلاق الشحنة',date:'',done:false,location:''}
+        ], createdAt:'2026-08-26T09:30:00'}
+    ];
+    db.awb_documents = [
+        {id:'AWB1',number:'123-45678901',type:'Master',bookingId:'B1',shipper:'شركة النور للتجارة',consignee:'شركة الخليج المحدودة',weight:'96 كغم',pieces:'8',dims:'50×60×80',value:'5000',desc:'مستلزمات إلكترونية - تسليم عاجل',date:'2026-08-25',issuedBy:'admin'},
+        {id:'AWB2',number:'123-45678902',type:'Master',bookingId:'B3',shipper:'مؤسسة البحرين الدولية للشحن',consignee:'شركة الرياض للتوزيع',weight:'150 كغم',pieces:'5',dims:'70×50×40',value:'3200',desc:'بضاعة عامة',date:'2026-08-26',issuedBy:'admin'},
+        {id:'AWB3',number:'123-45678903',type:'House',bookingId:'B4',shipper:'شركة النور للتجارة',consignee:'مستودع الدوحة المركزي',weight:'45 كغم',pieces:'3',dims:'40×40×30',value:'8500',desc:'أدوية - تخزين مبرد 15-25°C',date:'2026-08-26',issuedBy:'admin'}
+    ];
+    db.invoices = [
+        {id:'INV1',number:'INV-2026-0001',date:'2026-08-25',bookingId:'B1',customerId:'C1',total:222.6,status:'مسددة',paid:222.6},
+        {id:'INV2',number:'INV-2026-0002',date:'2026-08-25',bookingId:'B2',customerId:'C2',total:748,status:'مستحقة',paid:0},
+        {id:'INV3',number:'INV-2026-0003',date:'2026-08-26',bookingId:'B3',customerId:'C3',total:360,status:'مسددة',paid:360},
+        {id:'INV4',number:'INV-2026-0004',date:'2026-08-26',bookingId:'B4',customerId:'C1',total:157.5,status:'مستحقة',paid:0},
+        {id:'INV5',number:'INV-2026-0005',date:'2026-08-20',bookingId:'',customerId:'C1',total:18000,status:'مستحقة',paid:0}
+    ];
+    db.payments = [
+        {id:'PAY1',invoiceId:'INV1',amount:222.6,date:'2026-08-25',method:'تحويل بنكي'},
+        {id:'PAY2',invoiceId:'INV3',amount:360,date:'2026-08-26',method:'نقدي'}
+    ];
+    db.commissions = [
+        {id:'COM1',agentId:'A1',bookingId:'B1',amount:11.13,date:'2026-08-25',status:'مسددة'},
+        {id:'COM2',agentId:'A2',bookingId:'B3',amount:25.2,date:'2026-08-26',status:'مستحقة'}
+    ];
+    db.notifications = [
+        {id:'N1',title:'حجز جديد',message:'تم إنشاء حجز BK-2026-000145 - شركة النور للتجارة',type:'success',read:false,timestamp:'2026-08-25T09:00:00'},
+        {id:'N2',title:'AWB جديد',message:'تم إصدار بوليصة 123-45678901',type:'info',read:false,timestamp:'2026-08-25T14:20:00'},
+        {id:'N3',title:'شحنة قيد النقل',message:'الشحنة 123-45678902 غادرت من عمّان',type:'warning',read:false,timestamp:'2026-08-26T16:00:00'}
+    ];
+    db.audit_logs = [
+        {id:'AUD1',timestamp:'2026-08-25T09:00:00',user:'مدير النظام',action:'إنشاء حجز',entity:'Booking',details:'رقم الحجز: BK-2026-000145'},
+        {id:'AUD2',timestamp:'2026-08-25T14:20:00',user:'مدير النظام',action:'إصدار AWB',entity:'AWB',details:'رقم: 123-45678901'},
+        {id:'AUD3',timestamp:'2026-08-26T08:00:00',user:'مدير النظام',action:'إنشاء حجز',entity:'Booking',details:'رقم الحجز: BK-2026-000147'}
+    ];
+    saveDB();
+    populateSelects();
+    updateDashboard();
+    renderBookings(); renderAWB(); renderFlights(); renderCustomers(); renderAgents(); renderInvoices(); renderCommissions(); renderAuditLogs();
+    updateNotificationBadge();
+    showToast('تم تحميل البيانات التجريبية بنجاح!');
+}
+</script>
+</body>
+</html>
